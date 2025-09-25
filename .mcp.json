@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "claude-ipc": {
+      "type": "stdio",
+      "command": "python",
+      "args": [
+        "D:\claude-ipc-mcp\tools\ipc_manager.py",
+        "server"
+      ],
+      "env": {
+        "CLAUDE_IPC_HOME": "D:\claude-ipc-mcp",
+        "CLAUDE_IPC_DB": "${USERPROFILE}\.claude-ipc-data\messages.db",
+        "CLAUDE_IPC_ENABLED": "true"
+      }
+    }
+  }
+}
