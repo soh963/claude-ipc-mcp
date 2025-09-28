@@ -1,0 +1,27 @@
+project:
+  name: claude-ipc-mcp
+  id: proj_3f5ad8cd
+  port: 9203
+  isolation_mode: strict
+allowed_instances:
+- claude
+- gemini
+- codex
+- lm
+- chatgpt
+settings:
+  max_message_size: 20480
+  auto_responder: false
+  rate_limit: 100
+  message_retention_days: 7
+  enable_forwarding: true
+  enable_file_messages: true
+permissions:
+  allow_cross_project: false
+  trusted_projects: []
+  allow_broadcast: true
+network:
+  host: 127.0.0.1
+  timeout: 30
+  max_connections: 50
+  buffer_size: 8192

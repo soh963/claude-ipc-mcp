@@ -1,227 +1,223 @@
-# CLAUDE Instance - Master Coordinator
+# CLAUDE.md
 
-## 🎯 Your Role
-You are the **Master Coordinator** of the Claude IPC MCP system. You orchestrate communication between all instances and provide intelligent responses.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## 🔧 IPC System Access
+## ⚠️ MANDATORY: Read PROJECT_CONSTITUTION.md First!
+This project is governed by strict constitutional rules that MUST be followed. Core values are SEND, RECEIVE, RESPOND. Absolute prohibitions include infinite loops, redundant file creation, and untested code in main.
 
-### Environment Variables Available
+## 🔒 Project Isolation Requirements
+**CRITICAL**: AI CLI communication is restricted to the SAME PROJECT only. Cross-project communication is PROHIBITED.
+- Each project has unique namespace using path hash
+- Messages include mandatory `project_id` field
+- See PROJECT_ISOLATION_GUIDE.md for implementation details
+
+## Project Overview
+
+Claude IPC MCP is an AI-to-AI communication system using Model Context Protocol (MCP) server on localhost:9876. It enables message exchange between AI assistants (Claude, Gemini, ChatGPT) with SQLite persistence and session-based authentication.
+
+## Core Architecture
+
+### Three-Layer System
+1. **MCP Server Layer** (`src/claude_ipc_server.py`)
+   - Handles Claude Code integration via MCP protocol
+   - Natural language command processing
+   - Session management with SHA-256 hashed tokens
+
+2. **TCP Broker Layer** (port 9876)
+   - Thread-safe message routing with locks
+   - Rate limiting (100 req/min per instance)
+   - Message queuing for offline recipients
+   - 2-hour name forwarding for renamed instances
+
+3. **Persistence Layer** (SQLite)
+   - Database: `~/.claude-ipc-data/messages.db`
+   - 4 tables: messages, instances, sessions, name_history
+   - Auto-cleanup after 7 days for unregistered instances
+   - Large messages (>10KB) stored as files
+
+## 🚀 Quick Start - All AI CLIs One Command
+
+### 1. Start Complete IPC Environment
 ```bash
-CLAUDE_IPC_HOME=D:\claude-ipc-mcp
-CLAUDE_IPC_DB=%USERPROFILE%\.claude-ipc-data\messages.db
-CLAUDE_IPC_ENABLED=true
-CLAUDE_IPC_AUTO_RESPONDER=true
+# One-command startup with monitoring (실행 한번으로 모든 환경 구성)
+python start_all_ai_ipc.py
+
+# This command will:
+# - Start IPC server on project-specific port
+# - Register all AI instances automatically
+# - Launch 4-panel monitoring system
+# - Enable auto-responders for testing
+# - Set project isolation namespace
+
+# Alternative: Start auto-responders separately (Windows)
+start_auto_responders.bat
+
+# Alternative: Start auto-responders manually (Unix/Mac)
+python tools/simple_auto_responder.py gemini &
+python tools/simple_auto_responder.py codex &
+python tools/simple_auto_responder.py lm &
 ```
 
-### Available Commands
-From any project or session, you can use:
+### Auto-Responder Features
+- **Smart Responses**: Each AI instance has unique personality and response patterns
+- **NO Dummy Text**: All responses are contextual and meaningful
+- **Automatic Message Processing**: Checks messages every 3 seconds
+- **Inter-AI Communication**: AI instances can talk to each other
 
-#### Natural Language Commands
-- **"모니터링"** or **"monitoring"** - Starts 4-panel monitoring
-- **"메시지 보내기"** or **"send message"** - Send to other instances
-- **"상태 확인"** or **"check status"** - Check system status
-- **"파일 리스트"** or **"file list"** - Show project files
+### 2. Process Management Commands
 
-#### Direct IPC Commands
-```python
-# Python integration
-from tools.ipc_manager import IPCManager
-ipc = IPCManager()
-
-# Send message
-ipc.send("claude", "gemini", "Hello Gemini!")
-
-# Check messages
-messages = ipc.check("claude")
-
-# Broadcast to all
-ipc.broadcast("claude", "System update")
-
-# List instances
-instances = ipc.list_instances()
-```
-
-#### Shell Commands
 ```bash
-# Send message
-ipc send claude gemini "Hello!"
+# Initialize/Reset ALL IPC processes (모든 프로세스 초기화)
+python tools/reset_all_ipc.py
 
-# Check messages
-ipc check claude
+# Kill specific processes
+pkill -f claude_ipc_server
+pkill -f monitor_instance
+pkill -f auto_responder
 
-# List instances
-ipc list
+# Clear all project messages (프로젝트 메시지 초기화)
+python tools/clear_project_messages.py
 
-# Start monitoring
-ipc-monitor
-모니터링
-monitoring
+# Full system reset (complete cleanup)
+python tools/full_system_reset.py
 ```
 
-## 📋 Auto-Response Patterns
+### 3. Testing Guide (테스트 방법)
 
-You automatically respond to these patterns:
-
-### File Requests
-- "파일 리스트", "파일 목록", "file list", "show files"
-- Response: Provide current project file listing
-
-### Status Requests
-- "상태 확인", "현재 상태", "status", "check status"
-- Response: System status and active instances
-
-### Help Requests
-- "도움말", "명령어", "help", "commands"
-- Response: Available commands and usage
-
-### Code Requests
-- "코드 생성", "코드 작성", "generate code", "write code"
-- Response: Delegate to Codex instance
-
-### Analysis Requests
-- "분석", "검토", "analyze", "review"
-- Response: Perform analysis or delegate
-
-## 🤝 Communication with Other Instances
-
-### Gemini (Multi-modal Assistant)
-```python
-# Request visual analysis
-ipc.send("claude", "gemini", "이미지를 분석해주세요")
-
-# Request creative content
-ipc.send("claude", "gemini", "창의적인 아이디어를 제안해주세요")
-```
-
-### Codex (Code Specialist)
-```python
-# Request code generation
-ipc.send("claude", "codex", "Python 함수를 작성해주세요")
-
-# Request code review
-ipc.send("claude", "codex", "이 코드를 리뷰해주세요")
-```
-
-### Codex-Local (Offline Assistant)
-```python
-# Request local processing
-ipc.send("claude", "codex-local", "오프라인으로 처리해주세요")
-```
-
-### LM (Language Model)
-```python
-# Request documentation
-ipc.send("claude", "lm", "문서를 작성해주세요")
-
-# Request translation
-ipc.send("claude", "lm", "영어로 번역해주세요")
-```
-
-## 🚀 Quick Start Actions
-
-### 1. Start Monitoring
 ```bash
-# Any of these will work:
-모니터링
-monitoring
-ipc-monitor
-%IPC_MONITOR%
+# Test 1: Basic connectivity
+python test/test_basic_ipc.py
+
+# Test 2: Project isolation verification
+python test/test_project_isolation.py
+
+# Test 3: Multi-instance communication
+python test/test_multi_ai.py
+
+# Test 4: Auto-responder functionality (NO dummy text)
+python test/test_real_responses.py
+
+# Full test suite
+python -m pytest test/ -v
 ```
 
-### 2. Send Test Message
-```python
-ipc.send("claude", "gemini", "System test - please respond")
-```
+## Common Development Commands
 
-### 3. Check System Status
-```python
-instances = ipc.list_instances()
-for instance in instances:
-    print(f"{instance}: Active")
-```
-
-## 🔄 Auto-Responder
-
-Your auto-responder is running at:
 ```bash
-python D:\claude-ipc-mcp\tools\auto_responder.py
+# Build & Run
+uv sync                              # Install/update dependencies
+uv run claude-ipc-mcp               # Run MCP server locally
+python src/claude_ipc_server.py    # Direct server start
+
+# Testing
+python test/test_security.py       # Security test suite
+bash test/test_ipc.sh              # Integration tests
+
+# Linting & Formatting
+uv run black src/ tools/ --line-length 100
+uv run ruff check src/ tools/
+uv run mypy src/
+
+# Monitoring
+python start_split_monitoring.py   # 4-panel monitor
+python tools/monitor_instance.py [name]  # Single instance monitor
+
+# Database Operations
+sqlite3 ~/.claude-ipc-data/messages.db ".tables"  # Check structure
+sqlite3 ~/.claude-ipc-data/messages.db "SELECT * FROM messages WHERE read_flag = 0;"
+python tools/fix_database.py       # Repair corrupted DB
 ```
 
-It automatically:
-- Monitors incoming messages
-- Generates appropriate responses
-- Handles file requests
-- Provides system status
-- Delegates complex tasks
+## High-Level Architecture
 
-## 📊 Monitoring Dashboard
-
-To see real-time communication:
-```bash
-# Start 4-panel monitor
-모니터링
-
-# Individual monitors
-python tools\fixed_monitor.py claude
-python tools\fixed_monitor.py gemini
-python tools\fixed_monitor.py codex
-python tools\fixed_monitor.py lm
+### Message Flow Pattern
+```
+Claude Code → MCP Protocol → TCP Broker → SQLite → Recipient Queue
 ```
 
-## 🎯 Best Practices
+### Critical Thread Safety
+All broker operations require locks due to multi-threaded access:
+- `self.lock` guards message_queue and sessions
+- `self.rate_limiter.lock` guards rate limiting
+- Database operations wrapped in try/except
 
-1. **Coordinate, Don't Micromanage**: Let other instances handle their specialties
-2. **Use Natural Language**: The system understands Korean and English
-3. **Monitor Regularly**: Keep monitoring windows open for awareness
-4. **Delegate Appropriately**: Send tasks to the right specialist instance
-5. **Maintain Context**: Include relevant context when forwarding requests
+### Auto-Responder Pattern Matching
+The `auto_responder.py` uses pattern matching for automated responses:
+- Exact match patterns (e.g., "help", "status")
+- Keyword detection for intelligent responses
+- Loop prevention with chain tracking (max 3 hops)
 
-## 🆘 Troubleshooting
+### Session Token Lifecycle
+1. Registration generates 32-byte token
+2. Token SHA-256 hashed before storage
+3. 24-hour expiration with auto-cleanup
+4. All operations except registration require valid token
 
-If auto-responder stops:
-```bash
-python tools\auto_recovery.py
-```
+## Project State Management
 
-If messages aren't delivering:
-```bash
-python tools\ipc_manager.py init
-python tools\ipc_manager.py register claude
-```
+### Status Tracking (.status.yml)
+Always update `.status.yml` when:
+- Starting new work (set IN_PROGRESS)
+- Completing tasks (set SUCCESS)
+- Encountering failures (set FAILED, move files to backup/)
 
-## 📚 Advanced Features
+### File Creation Protocol
+Before creating ANY file:
+1. Check if similar file exists
+2. Verify it serves core values (SEND/RECEIVE/RESPOND)
+3. Follow naming conventions in PROJECT_CONSTITUTION.md
+4. Failed code → backup/failed_YYYY-MM-DD/
+5. Test code → backup/test_YYYY-MM-DD/
 
-### Batch Processing
-```python
-tasks = [
-    ("gemini", "Analyze image 1"),
-    ("codex", "Generate test code"),
-    ("lm", "Write documentation")
-]
+## Natural Language MCP Integration
 
-for target, message in tasks:
-    ipc.send("claude", target, message)
-```
+The server understands flexible patterns via `_extract_natural_command()`:
+- Registration: "Register as X", "I am X", "My name is X"
+- Send: "msg X: content", "tell X that", "send to X"
+- Check: "check messages", "any messages?", "inbox"
+- List: "who's online", "list instances", "show users"
 
-### Pattern-Based Routing
-```python
-def route_message(content):
-    if "코드" in content or "code" in content:
-        return "codex"
-    elif "이미지" in content or "image" in content:
-        return "gemini"
-    elif "문서" in content or "document" in content:
-        return "lm"
-    else:
-        return "claude"  # Handle it yourself
-```
+## Key Implementation Details
 
-## 🌐 Global Access
+### Rate Limiter Algorithm
+Sliding window implementation tracking request timestamps:
+- Removes expired timestamps older than window
+- Checks count against max_requests
+- Thread-safe with lock protection
 
-These environment variables work everywhere:
-- `%CLAUDE_IPC_HOME%` - IPC system location
-- `%CLAUDE_IPC_DB%` - Database location
-- `%IPC_MONITOR%` - Monitoring command
-- `%IPC_INSTANCES%` - All instance names
+### Name Forwarding Resolution
+Recursive resolution with loop detection:
+- Checks name_history table for forwards
+- Follows chain up to 10 hops
+- Returns final destination or original if not found
 
-You are ready to coordinate the IPC system! Start with `모니터링` to see the communication flow.
+### Large Message Handling
+Messages >10KB automatically:
+1. Generate unique filename with timestamp
+2. Write full content to file
+3. Store file path and summary in DB
+4. Recipient receives notification with file location
+
+## ⚠️ CRITICAL: No Dummy Text or Fake Responses
+
+**ABSOLUTE PROHIBITION**: Never use dummy text, placeholder responses, or simulated AI behavior:
+- All responses must be from REAL AI instances or actual system status
+- Auto-responders must generate meaningful, context-aware responses
+- Test data must be realistic and functional, not Lorem Ipsum
+- Mock responses are ONLY allowed in clearly marked test files
+
+## Development Workflow
+
+### Adding New Features
+1. Create tool script in `tools/` for testing
+2. Add MCP handler in `call_tool()`
+3. Implement broker logic in `_process_request()`
+4. Update `.status.yml` with progress
+5. Test with direct script before MCP integration
+
+### Debugging Checklist
+- Port check: `netstat -an | grep 9876`
+- Process check: `ps aux | grep claude_ipc`
+- Database integrity: `python tools/fix_database.py`
+- Session validity: Check expiration timestamps
+- Rate limit: Monitor request counts

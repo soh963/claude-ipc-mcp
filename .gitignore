@@ -34,4 +34,4 @@ Thumbs.db
 *.log
 messages.db
 .claude-ipc/
-ipc-messages/
+ipc-messages/backup/redundant_2024-09-26/

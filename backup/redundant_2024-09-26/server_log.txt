@@ -1,0 +1,36 @@
+Claude IPC MCP Server Registration Log
+=======================================
+Date: 2025-09-25
+Time: 09:42 AM
+
+REGISTRATION SUMMARY:
+✅ MCP Server successfully registered in Claude Desktop configuration
+✅ Server location: D:\claude-ipc-mcp
+✅ Server command: uvx --from D:\claude-ipc-mcp claude-ipc-mcp
+✅ Configuration file: C:\Users\lovecat\AppData\Roaming\Claude\claude_desktop_config.json
+
+SERVER STATUS:
+✅ Server executable found and working
+✅ Message broker initialized on 127.0.0.1:9876
+✅ SQLite database ready at C:\Users\lovecat\.claude-ipc-data\messages.db
+
+PREVIOUS SERVER LOG:
+INFO:claude_ipc_server:SQLite database initialized at C:\Users\lovecat/.claude-ipc-data\messages.db
+INFO:claude_ipc_server:Loaded 0 messages from database
+INFO:claude_ipc_server:Started message broker
+INFO:claude_ipc_server:Message broker listening on 127.0.0.1:9876
+INFO:claude_ipc_server:Starting Claude IPC MCP Server for WSL
+INFO:claude_ipc_server:Broker endpoint: 127.0.0.1:9876
+
+NEXT STEPS:
+1. Restart Claude Desktop application for the changes to take effect
+2. The claude-ipc server will appear in the MCP servers list
+3. You can now use IPC tools for AI-to-AI communication
+
+AVAILABLE TOOLS (once activated):
+- send_message: Send messages to other AI instances
+- receive_messages: Retrieve messages from other instances
+- list_instances: See all registered AI instances
+- register_instance: Register a new AI instance
+- set_instance_info: Update instance information
+- clear_messages: Clear message history

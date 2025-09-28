@@ -1,0 +1,13 @@
+{
+  "codex": {
+    "id": "codex",
+    "registered_at": "2025-03-02T00:00:00Z",
+    "status": "active",
+    "type": "codex",
+    "capabilities": [
+      "code_generation",
+      "analysis",
+      "documentation"
+    ]
+  }
+}

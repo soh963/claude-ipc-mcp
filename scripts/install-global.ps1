@@ -115,6 +115,43 @@ foreach ($filename in $aliasCommands.Keys) {
 
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
+Write-Host "  Updating PowerShell Profiles" -ForegroundColor Yellow
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host ""
+
+$dotSourceCommand = ". '$toolsPath\ipc_cli_helpers.ps1'"
+$profileTargets = @(
+    @{ Label = "CurrentUserAllHosts"; Path = $PROFILE.CurrentUserAllHosts },
+    @{ Label = "CurrentUserCurrentHost"; Path = $PROFILE.CurrentUserCurrentHost }
+)
+
+foreach ($target in $profileTargets) {
+    $profilePath = $target.Path
+    if (-not $profilePath) {
+        continue
+    }
+
+    $profileDir = Split-Path -Parent $profilePath
+    if ($profileDir -and -not (Test-Path $profileDir)) {
+        New-Item -ItemType Directory -Path $profileDir -Force | Out-Null
+    }
+
+    if (-not (Test-Path $profilePath)) {
+        New-Item -ItemType File -Path $profilePath -Force | Out-Null
+    }
+
+    $profileContent = Get-Content -Path $profilePath -ErrorAction SilentlyContinue
+    if ($profileContent -notcontains $dotSourceCommand) {
+        Add-Content -Path $profilePath -Value "`n$dotSourceCommand`n"
+        Write-Host "  ✓ Added helpers to $($target.Label)" -ForegroundColor Green
+    }
+    else {
+        Write-Host "  ℹ Helpers already referenced in $($target.Label)" -ForegroundColor Yellow
+    }
+}
+
+Write-Host ""
+Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "  Installing to Windows Startup" -ForegroundColor Yellow
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""

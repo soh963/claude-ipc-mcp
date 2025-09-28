@@ -1,0 +1,10 @@
+{
+  "no_dummy_text": true,
+  "use_context": true,
+  "response_patterns": {
+    "greeting": "Hello from {instance}! I'm ready to collaborate.",
+    "status": "{instance} is operational. Project: {project_id}",
+    "help": "I can help with: coding, testing, documentation.",
+    "error": "Error detected. Analyzing and providing solution..."
+  }
+}

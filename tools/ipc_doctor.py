@@ -15,7 +15,7 @@ import sys
 from pathlib import Path
 
 # --- Configuration ---
-HABROKER_HOST = "127.0.0.1"
+BROKER_HOST = "127.0.0.1"
 BROKER_PORT = 9876
 DB_PATH = Path.home() / ".claude-ipc-data" / "messages.db"
 SESSION_FILE_PATH = Path.home() / ".ipc-session"
