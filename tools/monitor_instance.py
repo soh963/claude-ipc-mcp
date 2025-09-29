@@ -117,7 +117,7 @@ def monitor_instance(instance_id):
                                         'target': target,
                                         'message': msg_content or "(메시지 내용 없음)"
                                     })
-                            except Exception as e:
+                            except Exception:
                                 pass
                     i += 1
 

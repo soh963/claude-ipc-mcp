@@ -5,7 +5,6 @@ Monitor messages for a specific instance without causing loops
 import sqlite3
 import time
 from pathlib import Path
-import sys
 import argparse
 
 class InstanceMonitor:
@@ -97,7 +96,7 @@ class InstanceMonitor:
             if result and result[0]:
                 self.last_check_id = result[0]
             conn.close()
-        except:
+        except Exception:
             pass
 
         message_count = 0

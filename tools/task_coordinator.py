@@ -8,8 +8,7 @@ import time
 import asyncio
 import socket
 from datetime import datetime
-from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Optional
 
 class TaskCoordinator:
     """AI 인스턴스 간 작업 조율 및 진행상황 추적"""

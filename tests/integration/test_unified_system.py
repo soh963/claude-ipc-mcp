@@ -6,7 +6,6 @@ Integration tests for Unified IPC System
 import unittest
 import sys
 import time
-import threading
 import asyncio
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -15,8 +14,7 @@ from unittest.mock import Mock, patch
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'src'))
 
 from unified_ipc_system import UnifiedIPCSystem
-from core.broker import BrokerConfig
-from core.router import RouteConfig, CommunicationMode
+from core.router import CommunicationMode
 from core.security import SecurityManager, SecurityConfig
 from core.async_broker import AsyncMessageBroker, AsyncConfig
 from monitoring.metrics import MetricsCollector

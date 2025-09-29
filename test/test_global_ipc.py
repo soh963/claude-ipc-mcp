@@ -3,7 +3,6 @@
 Test Global IPC functionality - Cross-project communication
 """
 
-import asyncio
 import sys
 import time
 from pathlib import Path
@@ -66,9 +65,7 @@ def test_cross_project():
     assert client_b.register("gemini", "global")  # Global visibility
     print(f"✅ Registered gemini in {project_b} (global)")
 
-    # Grant permission for cross-project
-    client_a_hash = client_a.project_hash
-    client_b_hash = client_b.project_hash
+    # Grant permission for cross-project (hashes computed implicitly if needed)
 
     # From A to B
     assert client_a.grant_permission(project_b)

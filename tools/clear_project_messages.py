@@ -10,7 +10,6 @@ import sqlite3
 import hashlib
 import argparse
 from pathlib import Path
-from datetime import datetime
 
 
 def get_project_id(project_path=None):

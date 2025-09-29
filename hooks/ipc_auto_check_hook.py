@@ -25,7 +25,7 @@ def should_trigger_auto_check():
     try:
         with open(CONFIG_FILE, 'r') as f:
             config = json.load(f)
-    except:
+    except Exception:
         return False
     
     # Check if enabled
@@ -51,7 +51,7 @@ def should_trigger_auto_check():
         
         # Trigger if enough time has passed
         return elapsed >= interval_seconds
-    except:
+    except Exception:
         # If parsing fails, trigger to be safe
         return True
 
@@ -70,7 +70,7 @@ if should_trigger_auto_check():
         with open(CONFIG_FILE, 'w') as f:
             json.dump(config, f, indent=2)
             
-    except Exception as e:
+    except Exception:
         # Silent failure - hooks shouldn't interrupt workflow
         pass
 

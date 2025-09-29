@@ -15,7 +15,6 @@ from pathlib import Path
 from contextlib import contextmanager
 import logging
 import hashlib
-import hmac
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -141,7 +140,7 @@ class MessageQueue:
                     content = row['content']
                     try:
                         content = json.loads(content)
-                    except:
+                    except json.JSONDecodeError:
                         pass  # Keep as string
 
                     messages.append(Message(
@@ -280,7 +279,7 @@ class MessageBroker:
             error_response = {'status': 'error', 'message': str(e)}
             try:
                 client.send(json.dumps(error_response).encode())
-            except:
+            except Exception:
                 pass
         finally:
             client.close()

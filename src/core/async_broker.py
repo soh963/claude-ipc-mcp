@@ -8,7 +8,7 @@ import asyncio
 import json
 import time
 from typing import Dict, Optional, Any, List, Callable, Set
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from collections import deque
 from asyncio import Queue, Task
 import logging

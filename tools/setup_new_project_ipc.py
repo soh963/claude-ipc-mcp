@@ -15,10 +15,9 @@ import sys
 import shutil
 import subprocess
 import time
-import json
 import argparse
 from pathlib import Path
-from typing import Dict, List, Optional, Any
+from typing import Optional, List
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -126,7 +125,7 @@ class IPCProjectSetup:
             req_target = self.target_path / 'requirements.txt'
             try:
                 shutil.copy2(req_source, req_target)
-                print(f"  ✅ Copied: requirements.txt")
+                print("  ✅ Copied: requirements.txt")
                 copied_count += 1
             except Exception as e:
                 print(f"  ⚠️  Could not copy requirements.txt: {e}")
@@ -161,10 +160,10 @@ class IPCProjectSetup:
 
             if not config_path.exists():
                 loader = ConfigLoader(str(config_path))
-                config = loader.get_config()
-                print(f"  ✅ Created: .ipc_project.yml")
+                loader.get_config()
+                print("  ✅ Created: .ipc_project.yml")
             else:
-                print(f"  ℹ️  Configuration already exists")
+                print("  ℹ️  Configuration already exists")
 
             self.setup_status['config_generated'] = True
             return True
@@ -303,7 +302,7 @@ class IPCProjectSetup:
                 self.setup_status['ai_registered'] = True
                 return True
             else:
-                print(f"  ⚠️  Some registrations may have failed")
+                print("  ⚠️  Some registrations may have failed")
                 return False
 
         except Exception as e:
@@ -378,7 +377,7 @@ Edit `.ipc_project.yml` to modify:
         try:
             readme_path.parent.mkdir(parents=True, exist_ok=True)
             readme_path.write_text(readme_content)
-            print(f"  ✅ Created: doc/IPC_README.md")
+            print("  ✅ Created: doc/IPC_README.md")
             return True
 
         except Exception as e:

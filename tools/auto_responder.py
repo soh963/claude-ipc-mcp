@@ -6,11 +6,9 @@ Automatically responds to certain requests from other instances
 
 import sqlite3
 import time
-import json
 import os
 from pathlib import Path
 from datetime import datetime
-import re
 
 class AutoResponder:
     def __init__(self, instance_id="claude"):
@@ -31,7 +29,7 @@ class AutoResponder:
             self.last_message_id = result[0]
             print(f"📊 초기화: 마지막 메시지 ID = {self.last_message_id}", flush=True)
         else:
-            print(f"📊 초기화: 메시지 없음, ID = 0", flush=True)
+            print("📊 초기화: 메시지 없음, ID = 0", flush=True)
 
         conn.close()
 
@@ -67,9 +65,9 @@ class AutoResponder:
             response = self.generate_response(content, from_id)
             if response:
                 self.send_response(from_id, response)
-                print(f"✅ 자동 응답 완료!", flush=True)
+                print("✅ 자동 응답 완료!", flush=True)
             else:
-                print(f"ℹ️ 자동 응답 패턴에 매칭되지 않음", flush=True)
+                print("ℹ️ 자동 응답 패턴에 매칭되지 않음", flush=True)
 
         conn.close()
 
@@ -112,8 +110,8 @@ class AutoResponder:
         try:
             files = os.listdir("D:/claude-ipc-mcp")
             main_files = [f for f in files if f.endswith(('.py', '.md', '.bat', '.ps1'))][:10]
-            return f"📁 프로젝트 주요 파일:\n" + "\n".join([f"- {f}" for f in main_files])
-        except:
+            return "📁 프로젝트 주요 파일:\n" + "\n".join([f"- {f}" for f in main_files])
+        except OSError:
             return "📁 파일 리스트를 가져올 수 없습니다."
 
     def get_help_response(self):
@@ -152,7 +150,7 @@ class AutoResponder:
 
     def run(self):
         """자동 응답 시스템 실행"""
-        print(f"🤖 Claude Auto-Responder 시작", flush=True)
+        print("🤖 Claude Auto-Responder 시작", flush=True)
         print(f"📁 Database: {self.db_path}", flush=True)
         print("=" * 60, flush=True)
         print("자동 응답 모드로 실행 중... (Ctrl+C로 종료)", flush=True)

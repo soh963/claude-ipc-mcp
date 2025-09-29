@@ -83,6 +83,15 @@ PowerShell을 다시 로드한 뒤 다음처럼 호출할 수 있습니다:
 - `nl_auto_chat.py <natural-language prompt>`
 - `manage_responders.py [--instance codex] [--stop]`
 
+### 다중 에이전트 실행기(신규)
+
+- `launch_agents.py --count 10 --prefix agent`
+  - 브로커를 보장하고 agent01~agent10을 병렬 등록합니다.
+- `launch_agents.py --count 10 --prefix agent --no-responder`
+  - 등록만 수행하고 자동 응답기는 시작하지 않습니다.
+- `launch_agents.py --dry-run`
+  - 실행 계획만 출력하고 변경은 하지 않습니다.
+
 로그인 시 `start_broker.py`를 실행하여 브로커를 항상 사용 가능하도록 유지하세요
 (작업 스케줄러 또는 셸 시작 스크립트).
 PATH와 별칭 설정이 완료되면, 어느 위치나 AI CLI 환경에서도

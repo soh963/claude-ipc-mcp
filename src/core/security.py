@@ -4,13 +4,14 @@ Security Manager for Unified IPC System
 Gemini's implementation - Authentication, authorization, and secure communication
 """
 
-import jwt
+# PyJWT is optional; guard the import to avoid hard dependency at import time
+try:
+    import jwt as pyjwt  # type: ignore
+except Exception:  # ImportError in most cases
+    pyjwt = None  # type: ignore
 import ssl
-import hashlib
-import hmac
-import time
 import secrets
-from typing import Dict, Optional, Any, List, Tuple
+from typing import Dict, Optional, List, Tuple
 from dataclasses import dataclass
 from pathlib import Path
 from datetime import datetime, timedelta
@@ -59,22 +60,28 @@ class JWTManager:
 
     def create_token(self, payload: Dict, expiry_minutes: int = 60) -> str:
         """Create a JWT token"""
+        if pyjwt is None:
+            raise RuntimeError("PyJWT is required for JWT operations but is not installed.\nInstall with: uv add pyjwt or pip install PyJWT")
         payload = payload.copy()
         payload['exp'] = datetime.utcnow() + timedelta(minutes=expiry_minutes)
         payload['iat'] = datetime.utcnow()
         payload['jti'] = secrets.token_hex(16)  # Token ID
-
-        return jwt.encode(payload, self.secret, algorithm=self.algorithm)
+        return pyjwt.encode(payload, self.secret, algorithm=self.algorithm)
 
     def verify_token(self, token: str) -> Optional[Dict]:
         """Verify and decode a JWT token"""
-        try:
-            payload = jwt.decode(token, self.secret, algorithms=[self.algorithm])
-            return payload
-        except jwt.ExpiredSignatureError:
-            logger.warning("Token expired")
+        if pyjwt is None:
+            logger.warning("JWT verification requested but PyJWT is not installed")
             return None
-        except jwt.InvalidTokenError as e:
+        try:
+            payload = pyjwt.decode(token, self.secret, algorithms=[self.algorithm])
+            return payload
+        except Exception as e:
+            # Handle specific PyJWT exceptions if available
+            name = type(e).__name__
+            if name == 'ExpiredSignatureError':
+                logger.warning("Token expired")
+                return None
             logger.warning(f"Invalid token: {e}")
             return None
 

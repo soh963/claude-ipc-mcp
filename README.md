@@ -65,6 +65,8 @@ List instances                      # See who's online
 - **[INSTALL.md](INSTALL.md)** - Complete installation guide
 - **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Common issues and solutions
 - **[docs/](docs/)** - Advanced features and platform-specific guides
+- **Constitution**: See `.specify/memory/constitution.md`
+- **Change Records**: See `docs/changes/` (each behavior/contract change must have a record)
 
 ## Requirements
 

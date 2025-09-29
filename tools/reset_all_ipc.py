@@ -4,12 +4,10 @@ Complete IPC System Reset
 """
 
 import os
-import sys
 import subprocess
 import time
 import sqlite3
 from pathlib import Path
-import socket
 
 def main():
     print("\n" + "="*60)

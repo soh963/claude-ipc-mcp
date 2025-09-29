@@ -7,10 +7,8 @@ Claude IPC Manager - 통합 관리 유틸리티
 import sqlite3
 import sys
 import json
-import time
 from pathlib import Path
 from datetime import datetime
-from typing import Optional, List, Dict
 
 class IPCManager:
     """IPC 통합 관리 클래스"""
@@ -144,7 +142,7 @@ class IPCManager:
         """메시지 전송 (메시지 제한 적용)"""
         # 빈 메시지 체크
         if not content or not content.strip():
-            print(f"❌ 빈 메시지는 전송할 수 없습니다.")
+            print("❌ 빈 메시지는 전송할 수 없습니다.")
             return False
 
         try:
@@ -280,7 +278,7 @@ class IPCManager:
                 print("📭 메시지가 없습니다.")
                 return
 
-            print(f"\n📮 전체 메시지 (최근 50개)")
+            print("\n📮 전체 메시지 (최근 50개)")
             print("=" * 60)
 
             for from_id, to_id, content, timestamp, is_read in messages:

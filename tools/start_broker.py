@@ -103,7 +103,7 @@ class BrokerManager:
         if self.lock_file.exists():
             try:
                 return int(self.lock_file.read_text().strip())
-            except:
+            except (ValueError, OSError):
                 return 0
         return 0
 
@@ -218,7 +218,7 @@ class BrokerManager:
                 else:
                     try:
                         os.kill(locked_pid, 9)
-                    except:
+                    except OSError:
                         pass
                 time.sleep(2)
             else:

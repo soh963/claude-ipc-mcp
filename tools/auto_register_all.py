@@ -8,7 +8,6 @@ import os
 import time
 import socket
 import json
-import hashlib
 from typing import List, Dict, Any
 
 # Add parent directory to path
@@ -142,7 +141,7 @@ class AutoRegister:
         print("\n🔍 Checking IPC server status...")
         if not self.check_server_status():
             print("❌ IPC server is not running!")
-            print(f"   Please start it with: python src/claude_ipc_server.py")
+            print("   Please start it with: python src/claude_ipc_server.py")
             return {}
 
         print("✅ IPC server is running")

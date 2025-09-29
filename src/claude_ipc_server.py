@@ -17,14 +17,12 @@ import time
 import sqlite3
 import hashlib
 import secrets
-from pathlib import Path
 
 from mcp.server import Server
 from mcp.types import (
     Resource,
     Tool,
-    TextContent,
-    LoggingLevel
+    TextContent
 )
 
 # Configuration
@@ -407,7 +405,7 @@ class MessageBroker:
             try:
                 error_response = {"status": "error", "message": str(e)}
                 client_socket.send(json.dumps(error_response).encode('utf-8'))
-            except:
+            except Exception:
                 pass
             finally:
                 client_socket.close()
@@ -686,7 +684,7 @@ Size: {size_kb:.1f}KB
                     self.queues[resolved_to] = []
                     future_delivery = True
                 else:
-                    future_delivery = not (resolved_to in self.instances)
+                    future_delivery = resolved_to not in self.instances
                     
                 # Check queue limit (100 messages per instance)
                 if len(self.queues[resolved_to]) >= 100:
@@ -849,7 +847,7 @@ current_instance_id = None
 try:
     broker.start()
     logger.info("Started message broker")
-except:
+except Exception:
     logger.info("Message broker already running")
 
 class BrokerClient:

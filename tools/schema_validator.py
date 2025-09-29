@@ -8,7 +8,7 @@ import sqlite3
 import sys
 import re
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, Optional
 from datetime import datetime
 import json
 

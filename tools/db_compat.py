@@ -6,7 +6,7 @@
 
 import sqlite3
 import re
-from typing import Optional, Any, List, Tuple
+from typing import Optional, List, Tuple
 
 class DBCompat:
     """데이터베이스 스키마 호환성 래퍼"""

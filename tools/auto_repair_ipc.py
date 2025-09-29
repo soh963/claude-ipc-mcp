@@ -5,12 +5,11 @@ IPC 시스템 자동 복구 도구
 """
 
 import sys
-import os
 import socket
 import sqlite3
 import time
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Optional
 from datetime import datetime, timedelta
 import subprocess
 import json
@@ -351,7 +350,7 @@ class IPCAutoRepair:
         """전체 복구 프로세스 실행"""
         print("🔧 IPC Auto-Repair System")
         print("=" * 60)
-        print(f"Starting comprehensive system check and repair...")
+        print("Starting comprehensive system check and repair...")
         print()
 
         start_time = time.time()

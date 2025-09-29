@@ -6,7 +6,6 @@ Unit tests for Message Broker
 import unittest
 import sys
 import time
-import json
 from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
 

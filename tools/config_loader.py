@@ -8,7 +8,7 @@ import os
 import sys
 import yaml
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Dict, Any
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -291,7 +291,7 @@ if __name__ == '__main__':
                     value = value.lower() == 'true'
                 elif value.isdigit():
                     value = int(value)
-            except:
+            except Exception:
                 pass
             if update_config_value(key, value):
                 print(f"✅ Updated {key} = {value}")

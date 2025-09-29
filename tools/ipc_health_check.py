@@ -15,19 +15,28 @@ import os
 import sys
 import socket
 import json
-import time
 import sqlite3
-import psutil
-import subprocess
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Any
-from datetime import datetime, timedelta
+from typing import Dict, List
+from datetime import datetime
 
-# Add parent directory to path
+# Ensure parent directory is on sys.path before importing project modules
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from tools.project_utils import get_project_id, get_project_port
 from tools.config_loader import ConfigLoader
+
+psutil = None  # will be imported lazily
+
+def _ensure_psutil():
+    global psutil
+    if psutil is None:
+        try:
+            import importlib
+            psutil = importlib.import_module("psutil")  # type: ignore
+        except Exception:
+            psutil = None  # type: ignore
+    return psutil
 
 
 class IPCHealthChecker:
@@ -64,7 +73,10 @@ class IPCHealthChecker:
         server_pids = []
 
         try:
-            for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+            if _ensure_psutil() is None:
+                print("  ⚠️  psutil not available; skipping process scan")
+                return False
+            for proc in psutil.process_iter(['pid', 'name', 'cmdline']):  # type: ignore
                 try:
                     cmdline = proc.info.get('cmdline', [])
                     if cmdline and any('claude_ipc_server' in str(arg) for arg in cmdline):
@@ -138,7 +150,7 @@ class IPCHealthChecker:
                 print(f"  ⚠️  Missing tables: {missing_tables}")
                 self.warnings.append(f"Missing database tables: {missing_tables}")
             else:
-                print(f"  ✅ All required tables present")
+                print("  ✅ All required tables present")
 
             # Check database integrity
             cursor.execute("PRAGMA integrity_check")
@@ -233,8 +245,11 @@ class IPCHealthChecker:
         all_ok = True
 
         try:
+            if _ensure_psutil() is None:
+                print("  ⚠️  psutil not available; skipping resource checks")
+                return False
             # Check disk space
-            disk_usage = psutil.disk_usage('/')
+            disk_usage = psutil.disk_usage('/')  # type: ignore
             free_gb = disk_usage.free / (1024 ** 3)
 
             if free_gb < 1:
@@ -247,7 +262,7 @@ class IPCHealthChecker:
                 self.health_status['disk_space_ok'] = True
 
             # Check memory
-            memory = psutil.virtual_memory()
+            memory = psutil.virtual_memory()  # type: ignore
             available_mb = memory.available / (1024 ** 2)
 
             if available_mb < 100:
@@ -260,7 +275,7 @@ class IPCHealthChecker:
                 self.health_status['memory_ok'] = True
 
             # Check CPU
-            cpu_percent = psutil.cpu_percent(interval=1)
+            cpu_percent = psutil.cpu_percent(interval=1)  # type: ignore
             if cpu_percent > 90:
                 print(f"  ⚠️  High CPU usage: {cpu_percent}%")
                 self.warnings.append(f"High CPU usage: {cpu_percent}%")
@@ -383,7 +398,7 @@ class IPCHealthChecker:
                         print("  ℹ️  No active instances found")
                         return []
                 else:
-                    print(f"  ⚠️  Could not get instance list")
+                    print("  ⚠️  Could not get instance list")
                     return []
             else:
                 print("  ❌ No response from server")

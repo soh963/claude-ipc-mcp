@@ -81,7 +81,7 @@ class SplitMonitor:
                                             if len(self.message_storage[instance]) > 10:
                                                 self.message_storage[instance] = self.message_storage[instance][-10:]
                                             break
-                            except:
+                            except Exception:
                                 pass
                         i += 1
 
@@ -90,7 +90,7 @@ class SplitMonitor:
             except KeyboardInterrupt:
                 self.running = False
                 break
-            except Exception as e:
+            except Exception:
                 time.sleep(2)
 
     def display_split_screen(self):

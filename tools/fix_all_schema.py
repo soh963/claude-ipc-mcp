@@ -4,11 +4,10 @@
 프로젝트 전체의 SQL 쿼리를 스캔하고 수정
 """
 
-import os
 import re
 import sys
 from pathlib import Path
-from typing import List, Dict, Tuple
+from typing import Dict
 import shutil
 from datetime import datetime
 
@@ -158,7 +157,7 @@ class SchemaFixer:
                 for change in self.changes_made[filepath]:
                     print(f"    - {change}")
             else:
-                print(f"  ⏭️  No changes needed")
+                print("  ⏭️  No changes needed")
 
         return self.generate_report()
 
