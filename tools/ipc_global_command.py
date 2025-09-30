@@ -417,6 +417,76 @@ def build_parser() -> argparse.ArgumentParser:
     sp = sub.add_parser("doctor", help="Diagnose IPC setup")
     sp.set_defaults(func=cmd_doctor)
 
+    # broker start/stop/status
+    sp = sub.add_parser("broker", help="Manage global broker process")
+    sub_b = sp.add_subparsers(dest="subcmd", required=True)
+    p_bs = sub_b.add_parser("start", help="Start singleton broker (respects env IPC_* settings)")
+    p_bs.set_defaults(_sub="start")
+    p_bk = sub_b.add_parser("stop", help="Stop singleton broker if running")
+    p_bk.set_defaults(_sub="stop")
+    p_bt = sub_b.add_parser("status", help="Show broker status")
+    p_bt.set_defaults(_sub="status")
+
+    def _cmd_broker(ns: argparse.Namespace) -> int:
+        subcmd = getattr(ns, "_sub", None)
+        if subcmd == "start":
+            try:
+                # Delegate to tools/start_broker.py for robust singleton start
+                # Allow real-time output by not capturing stdout/stderr
+                import subprocess, sys as _sys, pathlib as _pl
+                script = _pl.Path(__file__).parent / "start_broker.py"
+                r = subprocess.run([_sys.executable, str(script)])
+                return r.returncode
+            except Exception as e:
+                print(f"error: broker start failed: {e}", file=sys.stderr)
+                return 3
+        if subcmd == "stop":
+            # Stop by reading PID from lock file and terminating
+            try:
+                from pathlib import Path as _Path
+                import os as _os, subprocess as _sp, signal as _signal, platform as _pf
+                lock = _Path.home() / ".claude-ipc-data" / "broker.lock"
+                if not lock.exists():
+                    print("broker not running (no lock)")
+                    return 0
+                pid_txt = lock.read_text().strip()
+                pid = int(pid_txt) if pid_txt.isdigit() else None
+                if not pid:
+                    lock.unlink(missing_ok=True)
+                    print("broker stopped (stale lock)")
+                    return 0
+                if _pf.system() == "Windows":
+                    _sp.run(["taskkill", "/F", "/PID", str(pid)], capture_output=True)
+                else:
+                    try:
+                        _os.kill(pid, _signal.SIGTERM)
+                    except Exception:
+                        pass
+                time.sleep(0.5)
+                lock.unlink(missing_ok=True)
+                print("broker stopped")
+                return 0
+            except Exception as e:
+                print(f"error: failed to stop broker: {e}", file=sys.stderr)
+                return 1
+        if subcmd == "status":
+            try:
+                ok = False
+                port = None
+                if broker_client:
+                    st = broker_client.status()
+                    ok = st.get("status") == "ok"
+                    port = getattr(broker_client, "IPC_PORT", None)
+                print(json.dumps({"running": ok, "port": int(port) if port else None}))
+                return 0 if ok else 10
+            except Exception as e:
+                print(f"error: {e}", file=sys.stderr)
+                return 10
+        print("unknown broker subcommand", file=sys.stderr)
+        return 12
+
+    sp.set_defaults(func=_cmd_broker)
+
     # messages clear
     sp = sub.add_parser("messages", help="Manage project messages")
     sub_msg = sp.add_subparsers(dest="subcmd", required=True)

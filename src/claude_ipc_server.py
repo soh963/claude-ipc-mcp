@@ -30,6 +30,13 @@ HEARTBEAT_INTERVAL = 30  # seconds
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# MODULE LOAD MARKER - This should appear when module is imported/reloaded
+logger.info("=" * 80)
+logger.info("🔥 CLAUDE_IPC_SERVER.PY MODULE LOADED - CODE FIX IS ACTIVE! 🔥")
+logger.info(f"   Module file: {__file__}")
+logger.info(f"   Python: {sys.executable}")
+logger.info("=" * 80)
+
 
 class RateLimiter:
     """Simple in-memory rate limiter"""
@@ -420,9 +427,12 @@ class MessageBroker:
         try:
             # Read smaller initial chunk to prevent DoS (M-03 fix)
             data = client_socket.recv(4096).decode("utf-8")
+            logger.info(f"[CONNECTION] Received data: {data[:100]}")
             request = json.loads(data)
+            logger.info(f"[CONNECTION] Parsed request: {request}")
 
             response = self._process_request(request)
+            logger.info(f"[CONNECTION] Response: {response}")
 
             client_socket.send(json.dumps(response).encode("utf-8"))
             client_socket.close()
@@ -617,11 +627,18 @@ Size: {size_kb:.1f}KB
         action = request.get("action")
 
         with self.lock:
-            # Validate session for non-registration actions
-            if action != "register":
+            # Validate session for non-registration and non-list actions
+            # list action should be publicly accessible for status checks
+            print(f"[FIX-CHECK] Processing action: {action}", flush=True)
+            logger.info(f"[FIX-CHECK] Processing action: {action}")
+            if action not in ("register", "list"):
+                print(f"[FIX-CHECK] Action {action} requires authentication", flush=True)
+                logger.info(f"[FIX-CHECK] Action {action} requires authentication")
                 instance_id = self._validate_session(request, action)
                 if not instance_id:
+                    logger.error(f"[FIX-CHECK] Authentication failed for action: {action}")
                     return {"status": "error", "message": "Invalid or missing session token"}
+                logger.info(f"[FIX-CHECK] Authentication successful for {instance_id}")
                 # Override any claimed instance_id with the validated one
                 if "from_id" in request:
                     request["from_id"] = instance_id
@@ -822,10 +839,19 @@ Size: {size_kb:.1f}KB
                 return {"status": "ok", "messages": messages}
 
             elif action == "list":
-                instances = [
-                    {"id": id, "last_seen": ts.isoformat()} for id, ts in self.instances.items()
-                ]
-                return {"status": "ok", "instances": instances}
+                logger.info("[DEBUG] List action called - code fix is active!")
+                try:
+                    instances = []
+                    for id, ts in self.instances.items():
+                        try:
+                            instances.append({"id": id, "last_seen": ts.isoformat()})
+                        except Exception as e:
+                            logger.error(f"Error converting timestamp for {id}: {e}, ts type: {type(ts)}, ts value: {ts}")
+                            instances.append({"id": id, "last_seen": str(ts)})
+                    return {"status": "ok", "instances": instances}
+                except Exception as e:
+                    logger.error(f"Error in list action: {e}")
+                    return {"status": "error", "message": str(e)}
 
             elif action == "rename":
                 # Get validated instance_id from session
