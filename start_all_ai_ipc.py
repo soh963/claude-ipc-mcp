@@ -77,7 +77,7 @@ class AllInOneIPCLauncher:
                 else:  # Unix/Linux
                     subprocess.run(f"pkill -f {proc}",
                                  shell=True, capture_output=True)
-            except:
+            except Exception:
                 pass
 
         time.sleep(2)  # Wait for processes to die
@@ -226,19 +226,19 @@ class AllInOneIPCLauncher:
         print("✨ AI IPC Environment Ready!")
         print("="*60)
         print("\n📚 Quick Commands:")
-        print(f"  • Send message: python tools/ipc_send.py claude gemini 'Hello'")
-        print(f"  • Check messages: python tools/ipc_check.py claude")
-        print(f"  • List instances: python tools/ipc_list.py")
-        print(f"  • Monitor specific: python tools/monitor_instance.py claude")
+        print("  • Send message: python tools/ipc_send.py claude gemini 'Hello'")
+        print("  • Check messages: python tools/ipc_check.py claude")
+        print("  • List instances: python tools/ipc_list.py")
+        print("  • Monitor specific: python tools/monitor_instance.py claude")
 
         print("\n🛑 To stop all processes:")
-        print(f"  • python tools/reset_all_ipc.py")
-        print(f"  • Or press Ctrl+C in this window")
+        print("  • python tools/reset_all_ipc.py")
+        print("  • Or press Ctrl+C in this window")
 
         print("\n💡 Project Details:")
         print(f"  • Project ID: {self.project_id}")
         print(f"  • Port: {self.project_port}")
-        print(f"  • Config: .ipc_project.json")
+        print("  • Config: .ipc_project.json")
         print("="*60 + "\n")
 
     def run(self):
@@ -275,10 +275,10 @@ class AllInOneIPCLauncher:
             try:
                 proc.terminate()
                 proc.wait(timeout=5)
-            except:
+            except Exception:
                 try:
                     proc.kill()
-                except:
+                except Exception:
                     pass
 
 

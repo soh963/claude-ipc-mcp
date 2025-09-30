@@ -6,7 +6,8 @@
 
 import sqlite3
 import re
-from typing import Optional, Any, List, Tuple
+from typing import Optional, List, Tuple
+
 
 class DBCompat:
     """데이터베이스 스키마 호환성 래퍼"""
@@ -14,28 +15,28 @@ class DBCompat:
     # 컬럼명 매핑 테이블
     COLUMN_MAPPINGS = {
         # instances 테이블
-        'id': 'instance_id',
-        'token_hash': 'session_token_hash',
+        "id": "instance_id",
+        "token_hash": "session_token_hash",
     }
 
     # SQL 쿼리 패턴 매핑
     QUERY_MAPPINGS = {
         # instances 테이블 관련
-        r'\bWHERE\s+id\s*=': 'WHERE instance_id =',
-        r'\bWHERE\s+id\s+IN': 'WHERE instance_id IN',
-        r'\bSELECT\s+id\b': 'SELECT instance_id',
-        r'\bSELECT\s+id,': 'SELECT instance_id,',
-        r'\bDELETE\s+FROM\s+instances\s+WHERE\s+id\b': 'DELETE FROM instances WHERE instance_id',
-        r'\bUPDATE\s+instances\s+SET\s+.*\s+WHERE\s+id\b': lambda m: m.group(0).replace('WHERE id', 'WHERE instance_id'),
-        r'\bINSERT\s+INTO\s+instances\s*\(\s*id\b': 'INSERT INTO instances (instance_id',
-        r'\bINSERT\s+OR\s+REPLACE\s+INTO\s+instances\s*\(\s*id\b': 'INSERT OR REPLACE INTO instances (instance_id',
-
+        r"\bWHERE\s+id\s*=": "WHERE instance_id =",
+        r"\bWHERE\s+id\s+IN": "WHERE instance_id IN",
+        r"\bSELECT\s+id\b": "SELECT instance_id",
+        r"\bSELECT\s+id,": "SELECT instance_id,",
+        r"\bDELETE\s+FROM\s+instances\s+WHERE\s+id\b": "DELETE FROM instances WHERE instance_id",
+        r"\bUPDATE\s+instances\s+SET\s+.*\s+WHERE\s+id\b": lambda m: m.group(0).replace(
+            "WHERE id", "WHERE instance_id"
+        ),
+        r"\bINSERT\s+INTO\s+instances\s*\(\s*id\b": "INSERT INTO instances (instance_id",
+        r"\bINSERT\s+OR\s+REPLACE\s+INTO\s+instances\s*\(\s*id\b": "INSERT OR REPLACE INTO instances (instance_id",
         # sessions 테이블 관련
-        r'\btoken_hash\b': 'session_token_hash',
-
+        r"\btoken_hash\b": "session_token_hash",
         # name_history 테이블 관련
-        r'\bold_id\b': 'old_instance_id',
-        r'\bnew_id\b': 'new_instance_id',
+        r"\bold_id\b": "old_instance_id",
+        r"\bnew_id\b": "new_instance_id",
     }
 
     @classmethod
@@ -53,8 +54,9 @@ class DBCompat:
         return fixed_query
 
     @classmethod
-    def safe_execute(cls, cursor: sqlite3.Cursor, query: str,
-                     params: Optional[Tuple] = None) -> sqlite3.Cursor:
+    def safe_execute(
+        cls, cursor: sqlite3.Cursor, query: str, params: Optional[Tuple] = None
+    ) -> sqlite3.Cursor:
         """스키마 차이를 자동으로 처리하는 안전한 쿼리 실행"""
         fixed_query = cls.fix_query(query)
 
@@ -71,16 +73,19 @@ class DBCompat:
 
             # 더 구체적인 오류 메시지 제공
             if "no column" in error_msg.lower():
-                column_match = re.search(r'no column named (\w+)', error_msg, re.IGNORECASE)
+                column_match = re.search(r"no column named (\w+)", error_msg, re.IGNORECASE)
                 if column_match:
                     bad_column = column_match.group(1)
-                    print(f"[DB_COMPAT] Column '{bad_column}' not found. Check schema with: sqlite3 ~/.claude-ipc-data/messages.db '.schema'")
+                    print(
+                        f"[DB_COMPAT] Column '{bad_column}' not found. Check schema with: sqlite3 ~/.claude-ipc-data/messages.db '.schema'"
+                    )
 
             raise
 
     @classmethod
-    def safe_executemany(cls, cursor: sqlite3.Cursor, query: str,
-                         params_list: List[Tuple]) -> sqlite3.Cursor:
+    def safe_executemany(
+        cls, cursor: sqlite3.Cursor, query: str, params_list: List[Tuple]
+    ) -> sqlite3.Cursor:
         """여러 파라미터를 사용한 배치 실행"""
         fixed_query = cls.fix_query(query)
 
@@ -92,15 +97,17 @@ class DBCompat:
             raise
 
     @classmethod
-    def safe_fetchone(cls, cursor: sqlite3.Cursor, query: str,
-                     params: Optional[Tuple] = None) -> Optional[Tuple]:
+    def safe_fetchone(
+        cls, cursor: sqlite3.Cursor, query: str, params: Optional[Tuple] = None
+    ) -> Optional[Tuple]:
         """단일 결과 조회"""
         cls.safe_execute(cursor, query, params)
         return cursor.fetchone()
 
     @classmethod
-    def safe_fetchall(cls, cursor: sqlite3.Cursor, query: str,
-                     params: Optional[Tuple] = None) -> List[Tuple]:
+    def safe_fetchall(
+        cls, cursor: sqlite3.Cursor, query: str, params: Optional[Tuple] = None
+    ) -> List[Tuple]:
         """모든 결과 조회"""
         cls.safe_execute(cursor, query, params)
         return cursor.fetchall()
@@ -133,10 +140,10 @@ class DBCompat:
 
         # 필수 테이블과 컬럼 확인
         required = {
-            'instances': ['instance_id', 'last_seen'],
-            'sessions': ['session_token_hash', 'instance_id', 'created_at', 'expires_at'],
-            'messages': ['message_id', 'from_id', 'to_id', 'content', 'timestamp', 'read_flag'],
-            'name_history': ['old_instance_id', 'new_instance_id', 'changed_at']
+            "instances": ["instance_id", "last_seen"],
+            "sessions": ["session_token_hash", "instance_id", "created_at", "expires_at"],
+            "messages": ["message_id", "from_id", "to_id", "content", "timestamp", "read_flag"],
+            "name_history": ["old_instance_id", "new_instance_id", "changed_at"],
         }
 
         issues = []
@@ -161,7 +168,9 @@ class DBCompat:
 
 
 # 기존 코드와의 호환성을 위한 헬퍼 함수들
-def safe_query(cursor: sqlite3.Cursor, query: str, params: Optional[Tuple] = None) -> sqlite3.Cursor:
+def safe_query(
+    cursor: sqlite3.Cursor, query: str, params: Optional[Tuple] = None
+) -> sqlite3.Cursor:
     """기존 코드에서 쉽게 사용할 수 있는 헬퍼 함수"""
     return DBCompat.safe_execute(cursor, query, params)
 
@@ -194,7 +203,8 @@ if __name__ == "__main__":
 
     # 실제 DB 스키마 검증 (DB가 존재하는 경우)
     from pathlib import Path
-    db_path = Path.home() / '.claude-ipc-data' / 'messages.db'
+
+    db_path = Path.home() / ".claude-ipc-data" / "messages.db"
 
     if db_path.exists():
         print("\n" + "=" * 40)

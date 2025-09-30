@@ -6,16 +6,12 @@ Verifies that messages are properly isolated between projects
 
 import sys
 import os
-import time
-import socket
-import json
-import hashlib
 
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from tools.project_utils import get_project_id, get_project_port, format_instance_name
-from tools.config_loader import load_project_config, is_cross_project_allowed
+from tools.config_loader import load_project_config
 
 
 def test_project_info():

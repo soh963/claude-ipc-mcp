@@ -95,7 +95,9 @@ def find_responders() -> List[ResponderProcess]:
                     except ValueError:
                         continue
         else:
-            result = subprocess.run(["ps", "-eo", "pid,args"], capture_output=True, text=True, check=False)
+            result = subprocess.run(
+                ["ps", "-eo", "pid,args"], capture_output=True, text=True, check=False
+            )
             for line in result.stdout.splitlines():
                 if any(keyword in line for keyword in RESPONDER_KEYWORDS):
                     try:
@@ -114,10 +116,16 @@ def format_responder(proc: ResponderProcess) -> str:
 
 def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="List or terminate running IPC auto-responders.")
-    parser.add_argument("--instance", help="Filter by instance id (case-insensitive).", default=None)
+    parser.add_argument(
+        "--instance", help="Filter by instance id (case-insensitive).", default=None
+    )
     parser.add_argument("--stop", action="store_true", help="Terminate matching responders.")
-    parser.add_argument("--stop-all", action="store_true", help="Terminate every detected responder.")
-    parser.add_argument("--dry-run", action="store_true", help="Show matches without taking action.")
+    parser.add_argument(
+        "--stop-all", action="store_true", help="Terminate every detected responder."
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Show matches without taking action."
+    )
     return parser.parse_args(list(argv))
 
 

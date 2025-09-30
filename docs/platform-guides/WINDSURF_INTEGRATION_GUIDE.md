@@ -62,7 +62,7 @@ You need ONE of these:
 1. Open GitHub Desktop
 2. Click `File` → `Clone Repository`
 3. Click the `URL` tab
-4. Paste: `https://github.com/jdez427/claude-ipc-mcp.git`
+4. Paste: `https://github.com/soh963/claude-ipc-mcp.git`
 5. For "Local Path", browse to: `C:\Users\[YourUsername]\Documents`
 6. Click `Clone`
 
@@ -70,11 +70,11 @@ You need ONE of these:
 Open PowerShell and run:
 ```powershell
 cd C:\Users\$env:USERNAME\Documents
-git clone https://github.com/jdez427/claude-ipc-mcp.git
+git clone https://github.com/soh963/claude-ipc-mcp.git
 ```
 
 #### Option C: Download ZIP (No Git Needed)
-1. Go to https://github.com/jdez427/claude-ipc-mcp
+1. Go to https://github.com/soh963/claude-ipc-mcp
 2. Click the green `Code` button
 3. Click `Download ZIP`
 4. Extract to `C:\Users\[YourUsername]\Documents\`

@@ -1,0 +1,4 @@
+# IPC project files to ignore
+secret/
+logs/
+*.log

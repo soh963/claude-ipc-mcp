@@ -15,10 +15,9 @@ import sys
 import shutil
 import subprocess
 import time
-import json
 import argparse
 from pathlib import Path
-from typing import Dict, List, Optional, Any
+from typing import Optional, List
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -43,39 +42,33 @@ class IPCProjectSetup:
 
         # Essential files and directories to copy
         self.essential_files = {
-            'tools': [
-                'project_utils.py',
-                'config_loader.py',
-                'ipc_register.py',
-                'ipc_send.py',
-                'ipc_check.py',
-                'ipc_list.py',
-                'auto_register_all.py'
+            "tools": [
+                "project_utils.py",
+                "config_loader.py",
+                "ipc_register.py",
+                "ipc_send.py",
+                "ipc_check.py",
+                "ipc_list.py",
+                "auto_register_all.py",
             ],
-            'src': [
-                'claude_ipc_server.py',
-                'project_isolation_patch.py'
-            ],
-            'test': [
-                'test_ipc_connection.py',
-                'test_project_isolation.py'
-            ]
+            "src": ["claude_ipc_server.py", "project_isolation_patch.py"],
+            "test": ["test_ipc_connection.py", "test_project_isolation.py"],
         }
 
         self.setup_status = {
-            'directories_created': False,
-            'files_copied': False,
-            'config_generated': False,
-            'server_started': False,
-            'connection_tested': False,
-            'ai_registered': False
+            "directories_created": False,
+            "files_copied": False,
+            "config_generated": False,
+            "server_started": False,
+            "connection_tested": False,
+            "ai_registered": False,
         }
 
     def create_directory_structure(self) -> bool:
         """Create necessary directories in target project"""
         print("\n📁 Creating directory structure...")
 
-        directories = ['tools', 'src', 'test', 'doc']
+        directories = ["tools", "src", "test", "doc"]
 
         try:
             for dir_name in directories:
@@ -83,7 +76,7 @@ class IPCProjectSetup:
                 dir_path.mkdir(parents=True, exist_ok=True)
                 print(f"  ✅ Created: {dir_name}/")
 
-            self.setup_status['directories_created'] = True
+            self.setup_status["directories_created"] = True
             return True
 
         except Exception as e:
@@ -121,12 +114,12 @@ class IPCProjectSetup:
                     failed_files.append(file_name)
 
         # Copy requirements.txt if exists
-        req_source = self.ipc_base / 'requirements.txt'
+        req_source = self.ipc_base / "requirements.txt"
         if req_source.exists():
-            req_target = self.target_path / 'requirements.txt'
+            req_target = self.target_path / "requirements.txt"
             try:
                 shutil.copy2(req_source, req_target)
-                print(f"  ✅ Copied: requirements.txt")
+                print("  ✅ Copied: requirements.txt")
                 copied_count += 1
             except Exception as e:
                 print(f"  ⚠️  Could not copy requirements.txt: {e}")
@@ -135,7 +128,7 @@ class IPCProjectSetup:
         if failed_files:
             print(f"  ⚠️  Failed files: {', '.join(failed_files)}")
 
-        self.setup_status['files_copied'] = copied_count > 0
+        self.setup_status["files_copied"] = copied_count > 0
         return copied_count > 0
 
     def generate_project_config(self) -> bool:
@@ -157,16 +150,16 @@ class IPCProjectSetup:
             print(f"  🔌 Project Port: {project_port}")
 
             # Create configuration using ConfigLoader
-            config_path = self.target_path / '.ipc_project.yml'
+            config_path = self.target_path / ".ipc_project.yml"
 
             if not config_path.exists():
                 loader = ConfigLoader(str(config_path))
-                config = loader.get_config()
-                print(f"  ✅ Created: .ipc_project.yml")
+                loader.get_config()
+                print("  ✅ Created: .ipc_project.yml")
             else:
-                print(f"  ℹ️  Configuration already exists")
+                print("  ℹ️  Configuration already exists")
 
-            self.setup_status['config_generated'] = True
+            self.setup_status["config_generated"] = True
             return True
 
         except Exception as e:
@@ -180,7 +173,7 @@ class IPCProjectSetup:
         """Install Python dependencies"""
         print("\n📦 Installing dependencies...")
 
-        req_file = self.target_path / 'requirements.txt'
+        req_file = self.target_path / "requirements.txt"
 
         if not req_file.exists():
             print("  ⚠️  requirements.txt not found, skipping dependency installation")
@@ -189,10 +182,10 @@ class IPCProjectSetup:
         try:
             # Install dependencies
             result = subprocess.run(
-                [sys.executable, '-m', 'pip', 'install', '-r', str(req_file)],
+                [sys.executable, "-m", "pip", "install", "-r", str(req_file)],
                 capture_output=True,
                 text=True,
-                cwd=str(self.target_path)
+                cwd=str(self.target_path),
             )
 
             if result.returncode == 0:
@@ -210,7 +203,7 @@ class IPCProjectSetup:
         """Start the IPC server for the project"""
         print("\n🚀 Starting IPC server...")
 
-        server_script = self.target_path / 'src' / 'claude_ipc_server.py'
+        server_script = self.target_path / "src" / "claude_ipc_server.py"
 
         if not server_script.exists():
             print(f"  ❌ Server script not found: {server_script}")
@@ -223,7 +216,7 @@ class IPCProjectSetup:
                 cwd=str(self.target_path),
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                text=True
+                text=True,
             )
 
             # Wait a moment for server to start
@@ -232,7 +225,7 @@ class IPCProjectSetup:
             # Check if server is running
             if process.poll() is None:
                 print("  ✅ IPC server started successfully")
-                self.setup_status['server_started'] = True
+                self.setup_status["server_started"] = True
                 return process
             else:
                 print("  ❌ Server failed to start")
@@ -246,7 +239,7 @@ class IPCProjectSetup:
         """Test IPC connection"""
         print("\n🔍 Testing IPC connection...")
 
-        test_script = self.target_path / 'test' / 'test_ipc_connection.py'
+        test_script = self.target_path / "test" / "test_ipc_connection.py"
 
         if not test_script.exists():
             print("  ⚠️  Test script not found, skipping connection test")
@@ -258,12 +251,12 @@ class IPCProjectSetup:
                 cwd=str(self.target_path),
                 capture_output=True,
                 text=True,
-                timeout=10
+                timeout=10,
             )
 
             if result.returncode == 0:
                 print("  ✅ Connection test passed")
-                self.setup_status['connection_tested'] = True
+                self.setup_status["connection_tested"] = True
                 return True
             else:
                 print(f"  ❌ Connection test failed: {result.stderr}")
@@ -281,9 +274,9 @@ class IPCProjectSetup:
         print("\n🤖 Registering AI instances...")
 
         if instances is None:
-            instances = ['claude', 'gemini', 'codex', 'lm']
+            instances = ["claude", "gemini", "codex", "lm"]
 
-        register_script = self.target_path / 'tools' / 'auto_register_all.py'
+        register_script = self.target_path / "tools" / "auto_register_all.py"
 
         if not register_script.exists():
             print("  ⚠️  Registration script not found")
@@ -295,15 +288,15 @@ class IPCProjectSetup:
                 cwd=str(self.target_path),
                 capture_output=True,
                 text=True,
-                timeout=30
+                timeout=30,
             )
 
             if result.returncode == 0:
                 print("  ✅ AI instances registered successfully")
-                self.setup_status['ai_registered'] = True
+                self.setup_status["ai_registered"] = True
                 return True
             else:
-                print(f"  ⚠️  Some registrations may have failed")
+                print("  ⚠️  Some registrations may have failed")
                 return False
 
         except Exception as e:
@@ -373,12 +366,12 @@ Edit `.ipc_project.yml` to modify:
 4. Test connection: `python test/test_ipc_connection.py`
 """
 
-        readme_path = self.target_path / 'doc' / 'IPC_README.md'
+        readme_path = self.target_path / "doc" / "IPC_README.md"
 
         try:
             readme_path.parent.mkdir(parents=True, exist_ok=True)
             readme_path.write_text(readme_content)
-            print(f"  ✅ Created: doc/IPC_README.md")
+            print("  ✅ Created: doc/IPC_README.md")
             return True
 
         except Exception as e:
@@ -393,7 +386,7 @@ Edit `.ipc_project.yml` to modify:
 
         for task, completed in self.setup_status.items():
             status = "✅" if completed else "❌"
-            task_display = task.replace('_', ' ').title()
+            task_display = task.replace("_", " ").title()
             print(f"  {status} {task_display}")
 
         print("=" * 60)
@@ -473,38 +466,25 @@ Edit `.ipc_project.yml` to modify:
 
 def main():
     """Main entry point"""
-    parser = argparse.ArgumentParser(
-        description="Automated IPC setup for new projects"
+    parser = argparse.ArgumentParser(description="Automated IPC setup for new projects")
+
+    parser.add_argument(
+        "target",
+        nargs="?",
+        default=".",
+        help="Target project directory (default: current directory)",
+    )
+
+    parser.add_argument("--ipc-source", help="Path to IPC source directory (default: auto-detect)")
+
+    parser.add_argument("--skip-server", action="store_true", help="Skip starting the IPC server")
+
+    parser.add_argument(
+        "--skip-registration", action="store_true", help="Skip AI instance registration"
     )
 
     parser.add_argument(
-        'target',
-        nargs='?',
-        default='.',
-        help='Target project directory (default: current directory)'
-    )
-
-    parser.add_argument(
-        '--ipc-source',
-        help='Path to IPC source directory (default: auto-detect)'
-    )
-
-    parser.add_argument(
-        '--skip-server',
-        action='store_true',
-        help='Skip starting the IPC server'
-    )
-
-    parser.add_argument(
-        '--skip-registration',
-        action='store_true',
-        help='Skip AI instance registration'
-    )
-
-    parser.add_argument(
-        '--minimal',
-        action='store_true',
-        help='Minimal setup (files and config only)'
+        "--minimal", action="store_true", help="Minimal setup (files and config only)"
     )
 
     args = parser.parse_args()
@@ -520,8 +500,7 @@ def main():
     try:
         # Run setup
         success = setup.run_full_setup(
-            skip_server=args.skip_server,
-            skip_registration=args.skip_registration
+            skip_server=args.skip_server, skip_registration=args.skip_registration
         )
 
         sys.exit(0 if success else 1)
@@ -532,9 +511,10 @@ def main():
     except Exception as e:
         print(f"\n❌ Setup failed: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

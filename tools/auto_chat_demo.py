@@ -58,7 +58,7 @@ def stream_output(proc: subprocess.Popen, label: str, turn_counter: dict[str, in
     assert proc.stdout is not None
     for line in proc.stdout:
         text = line.rstrip()
-        print(f"[{label}] {text}" )
+        print(f"[{label}] {text}")
         if "Sent to" in text:
             turn_counter[label] = turn_counter.get(label, 0) + 1
     proc.stdout.close()
@@ -81,9 +81,15 @@ def send_message(sender: str, recipient: str, content: str) -> None:
 
 
 def parse_args(argv: Iterable[str]) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run an automated IPC chat demo with live monitoring.")
-    parser.add_argument("agent_a", nargs="?", default="codex", help="First agent name (default: codex)")
-    parser.add_argument("agent_b", nargs="?", default="gemini", help="Second agent name (default: gemini)")
+    parser = argparse.ArgumentParser(
+        description="Run an automated IPC chat demo with live monitoring."
+    )
+    parser.add_argument(
+        "agent_a", nargs="?", default="codex", help="First agent name (default: codex)"
+    )
+    parser.add_argument(
+        "agent_b", nargs="?", default="gemini", help="Second agent name (default: gemini)"
+    )
     parser.add_argument(
         "--message",
         nargs="+",

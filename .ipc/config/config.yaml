@@ -1,0 +1,4 @@
+# IPC project configuration
+version: 0
+# add settings under this key
+settings: {}

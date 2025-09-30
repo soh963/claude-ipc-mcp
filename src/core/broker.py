@@ -15,7 +15,6 @@ from pathlib import Path
 from contextlib import contextmanager
 import logging
 import hashlib
-import hmac
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -24,11 +23,12 @@ logger = logging.getLogger(__name__)
 @dataclass
 class BrokerConfig:
     """Configuration for message broker"""
+
     port: int = 9876
-    host: str = '127.0.0.1'
+    host: str = "127.0.0.1"
     max_connections: int = 100
     message_timeout: int = 30
-    db_path: Path = field(default_factory=lambda: Path.home() / '.claude-ipc-data' / 'broker.db')
+    db_path: Path = field(default_factory=lambda: Path.home() / ".claude-ipc-data" / "broker.db")
     enable_security: bool = True
     enable_metrics: bool = True
 
@@ -36,30 +36,31 @@ class BrokerConfig:
 @dataclass
 class Message:
     """Message structure for IPC communication"""
+
     id: str
     from_id: str
     to_id: str
     content: Any
     timestamp: float
-    scope: str = 'project'
+    scope: str = "project"
     project_id: Optional[str] = None
     encrypted: bool = False
 
     def to_dict(self) -> Dict:
         """Convert message to dictionary"""
         return {
-            'id': self.id,
-            'from_id': self.from_id,
-            'to_id': self.to_id,
-            'content': self.content,
-            'timestamp': self.timestamp,
-            'scope': self.scope,
-            'project_id': self.project_id,
-            'encrypted': self.encrypted
+            "id": self.id,
+            "from_id": self.from_id,
+            "to_id": self.to_id,
+            "content": self.content,
+            "timestamp": self.timestamp,
+            "scope": self.scope,
+            "project_id": self.project_id,
+            "encrypted": self.encrypted,
         }
 
     @classmethod
-    def from_dict(cls, data: Dict) -> 'Message':
+    def from_dict(cls, data: Dict) -> "Message":
         """Create message from dictionary"""
         return cls(**data)
 
@@ -77,7 +78,8 @@ class MessageQueue:
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
 
         with self._get_db() as conn:
-            conn.execute('''
+            conn.execute(
+                """
                 CREATE TABLE IF NOT EXISTS messages (
                     id TEXT PRIMARY KEY,
                     from_id TEXT NOT NULL,
@@ -89,11 +91,14 @@ class MessageQueue:
                     encrypted INTEGER DEFAULT 0,
                     delivered INTEGER DEFAULT 0
                 )
-            ''')
+            """
+            )
 
-            conn.execute('''
+            conn.execute(
+                """
                 CREATE INDEX IF NOT EXISTS idx_to_id ON messages(to_id, delivered)
-            ''')
+            """
+            )
 
     @contextmanager
     def _get_db(self):
@@ -110,20 +115,27 @@ class MessageQueue:
         """Add message to queue"""
         with self.lock:
             with self._get_db() as conn:
-                conn.execute('''
+                conn.execute(
+                    """
                     INSERT INTO messages
                     (id, from_id, to_id, content, timestamp, scope, project_id, encrypted)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                ''', (
-                    message.id,
-                    message.from_id,
-                    message.to_id,
-                    json.dumps(message.content) if not isinstance(message.content, str) else message.content,
-                    message.timestamp,
-                    message.scope,
-                    message.project_id,
-                    int(message.encrypted)
-                ))
+                """,
+                    (
+                        message.id,
+                        message.from_id,
+                        message.to_id,
+                        (
+                            json.dumps(message.content)
+                            if not isinstance(message.content, str)
+                            else message.content
+                        ),
+                        message.timestamp,
+                        message.scope,
+                        message.project_id,
+                        int(message.encrypted),
+                    ),
+                )
 
     def get_messages(self, instance_id: str, mark_delivered: bool = True) -> List[Message]:
         """Get messages for specific instance"""
@@ -131,38 +143,46 @@ class MessageQueue:
             messages = []
 
             with self._get_db() as conn:
-                rows = conn.execute('''
+                rows = conn.execute(
+                    """
                     SELECT * FROM messages
                     WHERE to_id = ? AND delivered = 0
                     ORDER BY timestamp
-                ''', (instance_id,))
+                """,
+                    (instance_id,),
+                )
 
                 for row in rows:
-                    content = row['content']
+                    content = row["content"]
                     try:
                         content = json.loads(content)
-                    except:
+                    except json.JSONDecodeError:
                         pass  # Keep as string
 
-                    messages.append(Message(
-                        id=row['id'],
-                        from_id=row['from_id'],
-                        to_id=row['to_id'],
-                        content=content,
-                        timestamp=row['timestamp'],
-                        scope=row['scope'],
-                        project_id=row['project_id'],
-                        encrypted=bool(row['encrypted'])
-                    ))
+                    messages.append(
+                        Message(
+                            id=row["id"],
+                            from_id=row["from_id"],
+                            to_id=row["to_id"],
+                            content=content,
+                            timestamp=row["timestamp"],
+                            scope=row["scope"],
+                            project_id=row["project_id"],
+                            encrypted=bool(row["encrypted"]),
+                        )
+                    )
 
                 if mark_delivered and messages:
                     msg_ids = [m.id for m in messages]
-                    placeholders = ','.join(['?'] * len(msg_ids))
-                    conn.execute(f'''
+                    placeholders = ",".join(["?"] * len(msg_ids))
+                    conn.execute(
+                        f"""
                         UPDATE messages
                         SET delivered = 1
                         WHERE id IN ({placeholders})
-                    ''', msg_ids)
+                    """,
+                        msg_ids,
+                    )
 
             return messages
 
@@ -171,10 +191,13 @@ class MessageQueue:
         with self.lock:
             with self._get_db() as conn:
                 cutoff_time = time.time() - max_age_seconds
-                conn.execute('''
+                conn.execute(
+                    """
                     DELETE FROM messages
                     WHERE delivered = 1 AND timestamp < ?
-                ''', (cutoff_time,))
+                """,
+                    (cutoff_time,),
+                )
 
 
 class MessageBroker:
@@ -199,12 +222,12 @@ class MessageBroker:
     def _register_handlers(self):
         """Register message handlers"""
         self.handlers = {
-            'register': self._handle_register,
-            'send': self._handle_send,
-            'check': self._handle_check,
-            'broadcast': self._handle_broadcast,
-            'list': self._handle_list,
-            'status': self._handle_status
+            "register": self._handle_register,
+            "send": self._handle_send,
+            "check": self._handle_check,
+            "broadcast": self._handle_broadcast,
+            "list": self._handle_list,
+            "status": self._handle_status,
         }
 
     def set_security_hook(self, hook: Callable):
@@ -244,9 +267,7 @@ class MessageBroker:
             try:
                 client, addr = self.socket.accept()
                 threading.Thread(
-                    target=self._handle_client,
-                    args=(client, addr),
-                    daemon=True
+                    target=self._handle_client, args=(client, addr), daemon=True
                 ).start()
             except Exception as e:
                 if self.running:
@@ -262,7 +283,7 @@ class MessageBroker:
                 # Security hook (if set by Gemini)
                 if self.security_hook and self.config.enable_security:
                     if not self.security_hook(request, addr):
-                        response = {'status': 'error', 'message': 'Security validation failed'}
+                        response = {"status": "error", "message": "Security validation failed"}
                         client.send(json.dumps(response).encode())
                         return
 
@@ -277,20 +298,20 @@ class MessageBroker:
 
         except Exception as e:
             logger.error(f"Error handling client: {e}")
-            error_response = {'status': 'error', 'message': str(e)}
+            error_response = {"status": "error", "message": str(e)}
             try:
                 client.send(json.dumps(error_response).encode())
-            except:
+            except Exception:
                 pass
         finally:
             client.close()
 
     def _process_request(self, request: Dict) -> Dict:
         """Process incoming request"""
-        msg_type = request.get('type')
+        msg_type = request.get("type")
 
         if msg_type not in self.handlers:
-            return {'status': 'error', 'message': f'Unknown message type: {msg_type}'}
+            return {"status": "error", "message": f"Unknown message type: {msg_type}"}
 
         # Async hook for optimization (if set by Codex)
         if self.async_hook:
@@ -300,60 +321,56 @@ class MessageBroker:
 
     def _handle_register(self, request: Dict) -> Dict:
         """Handle registration request"""
-        instance_id = request.get('instance_id')
-        project_id = request.get('project_id')
+        instance_id = request.get("instance_id")
+        project_id = request.get("project_id")
 
         with self.lock:
             self.clients[instance_id] = {
-                'registered': time.time(),
-                'project_id': project_id,
-                'last_seen': time.time()
+                "registered": time.time(),
+                "project_id": project_id,
+                "last_seen": time.time(),
             }
 
         logger.info(f"Registered instance: {instance_id}")
-        return {'status': 'ok', 'message': f'Registered {instance_id}'}
+        return {"status": "ok", "message": f"Registered {instance_id}"}
 
     def _handle_send(self, request: Dict) -> Dict:
         """Handle send message request"""
         try:
             message = Message(
-                id=hashlib.sha256(f"{time.time()}_{request.get('from_id')}_{request.get('to_id')}".encode()).hexdigest()[:16],
-                from_id=request.get('from_id'),
-                to_id=request.get('to_id'),
-                content=request.get('content'),
+                id=hashlib.sha256(
+                    f"{time.time()}_{request.get('from_id')}_{request.get('to_id')}".encode()
+                ).hexdigest()[:16],
+                from_id=request.get("from_id"),
+                to_id=request.get("to_id"),
+                content=request.get("content"),
                 timestamp=time.time(),
-                scope=request.get('scope', 'project'),
-                project_id=request.get('project_id')
+                scope=request.get("scope", "project"),
+                project_id=request.get("project_id"),
             )
 
             self.queue.add_message(message)
 
-            return {'status': 'ok', 'message': 'Message sent'}
+            return {"status": "ok", "message": "Message sent"}
 
         except Exception as e:
-            return {'status': 'error', 'message': str(e)}
+            return {"status": "error", "message": str(e)}
 
     def _handle_check(self, request: Dict) -> Dict:
         """Handle check messages request"""
-        instance_id = request.get('instance_id')
+        instance_id = request.get("instance_id")
 
         messages = self.queue.get_messages(instance_id)
 
         if messages:
-            return {
-                'status': 'ok',
-                'messages': [m.to_dict() for m in messages]
-            }
+            return {"status": "ok", "messages": [m.to_dict() for m in messages]}
         else:
-            return {
-                'status': 'ok',
-                'messages': []
-            }
+            return {"status": "ok", "messages": []}
 
     def _handle_broadcast(self, request: Dict) -> Dict:
         """Handle broadcast message"""
-        from_id = request.get('from_id')
-        content = request.get('content')
+        from_id = request.get("from_id")
+        content = request.get("content")
 
         with self.lock:
             recipients = list(self.clients.keys())
@@ -361,52 +378,54 @@ class MessageBroker:
         for recipient in recipients:
             if recipient != from_id:
                 message = Message(
-                    id=hashlib.sha256(f"{time.time()}_{from_id}_{recipient}".encode()).hexdigest()[:16],
+                    id=hashlib.sha256(f"{time.time()}_{from_id}_{recipient}".encode()).hexdigest()[
+                        :16
+                    ],
                     from_id=from_id,
                     to_id=recipient,
                     content=content,
                     timestamp=time.time(),
-                    scope='broadcast'
+                    scope="broadcast",
                 )
                 self.queue.add_message(message)
 
-        return {'status': 'ok', 'message': f'Broadcast to {len(recipients) - 1} instances'}
+        return {"status": "ok", "message": f"Broadcast to {len(recipients) - 1} instances"}
 
     def _handle_list(self, request: Dict) -> Dict:
         """Handle list instances request"""
         with self.lock:
             instances = [
                 {
-                    'id': instance_id,
-                    'project_id': info.get('project_id'),
-                    'registered': info.get('registered'),
-                    'last_seen': info.get('last_seen')
+                    "id": instance_id,
+                    "project_id": info.get("project_id"),
+                    "registered": info.get("registered"),
+                    "last_seen": info.get("last_seen"),
                 }
                 for instance_id, info in self.clients.items()
             ]
 
-        return {'status': 'ok', 'instances': instances}
+        return {"status": "ok", "instances": instances}
 
     def _handle_status(self, request: Dict) -> Dict:
         """Handle status request"""
         with self.lock:
             status = {
-                'running': self.running,
-                'clients': len(self.clients),
-                'config': {
-                    'host': self.config.host,
-                    'port': self.config.port,
-                    'security': self.config.enable_security,
-                    'metrics': self.config.enable_metrics
+                "running": self.running,
+                "clients": len(self.clients),
+                "config": {
+                    "host": self.config.host,
+                    "port": self.config.port,
+                    "security": self.config.enable_security,
+                    "metrics": self.config.enable_metrics,
                 },
-                'hooks': {
-                    'security': self.security_hook is not None,
-                    'async': self.async_hook is not None,
-                    'metrics': self.metrics_hook is not None
-                }
+                "hooks": {
+                    "security": self.security_hook is not None,
+                    "async": self.async_hook is not None,
+                    "metrics": self.metrics_hook is not None,
+                },
             }
 
-        return {'status': 'ok', 'broker_status': status}
+        return {"status": "ok", "broker_status": status}
 
     def _cleanup_loop(self):
         """Periodic cleanup of old messages and stale clients"""
@@ -420,8 +439,9 @@ class MessageBroker:
             with self.lock:
                 current_time = time.time()
                 stale_clients = [
-                    client_id for client_id, info in self.clients.items()
-                    if current_time - info.get('last_seen', 0) > 3600  # 1 hour
+                    client_id
+                    for client_id, info in self.clients.items()
+                    if current_time - info.get("last_seen", 0) > 3600  # 1 hour
                 ]
                 for client_id in stale_clients:
                     del self.clients[client_id]

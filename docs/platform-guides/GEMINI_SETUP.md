@@ -79,7 +79,7 @@ Open your terminal and run:
 
 ```bash
 # Clone the repository
-git clone https://github.com/jdez427/claude-ipc-mcp.git
+git clone https://github.com/soh963/claude-ipc-mcp.git
 
 # Go to the tools folder
 cd claude-ipc-mcp/tools

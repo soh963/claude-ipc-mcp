@@ -15,7 +15,7 @@ def test_connection():
         s.close()
         print("✅ Server is running on port 9876")
         return True
-    except:
+    except Exception:
         print("❌ Server not running on port 9876")
         return False
 

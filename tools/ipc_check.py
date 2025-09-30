@@ -21,7 +21,9 @@ def check_messages(instance_id: str | None = None) -> None:
         sock.settimeout(5.0)
         sock.connect((BROKER_HOST, BROKER_PORT))
     except OSError as exc:
-        raise SystemExit(f"Error: Could not connect to broker at {BROKER_HOST}:{BROKER_PORT} ({exc}).")
+        raise SystemExit(
+            f"Error: Could not connect to broker at {BROKER_HOST}:{BROKER_PORT} ({exc})."
+        )
 
     try:
         request = {
@@ -48,7 +50,7 @@ def check_messages(instance_id: str | None = None) -> None:
         print(f"From: {msg['from']}")
         print(f"Time: {msg['timestamp']}")
         print(f"Content: {msg['message']['content']}")
-        if msg['message'].get('data'):
+        if msg["message"].get("data"):
             print(f"Data: {json.dumps(msg['message']['data'], indent=2)}")
         print("-" * 50)
 

@@ -145,7 +145,7 @@ A: Yes, just register with a new name. Old name remains for 2 hours for message 
    ```
 
 3. **Get help:**
-   - Open an issue: https://github.com/jdez427/claude-ipc-mcp/issues
+   - Open an issue: https://github.com/soh963/claude-ipc-mcp/issues
    - Include your OS, Python version, and error messages
 
 ---

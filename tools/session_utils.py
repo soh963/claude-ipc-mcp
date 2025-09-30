@@ -4,6 +4,7 @@ This module centralizes the logic for saving and loading per-instance session
 files so that multiple AI agents can coexist on the same machine without
 clobbering each other's authentication state.
 """
+
 from __future__ import annotations
 
 import json
@@ -98,7 +99,9 @@ def load_session(instance_id: Optional[str] = None) -> SessionData:
             if len(matches) == 1:
                 candidate_path = matches[0]
             elif len(matches) > 1:
-                available = ", ".join(path.name.replace(f"{SESSION_PREFIX}-", "") for path in matches)
+                available = ", ".join(
+                    path.name.replace(f"{SESSION_PREFIX}-", "") for path in matches
+                )
                 raise FileNotFoundError(
                     "Multiple session files detected. Specify an instance id with "
                     "--instance. Available instances: " + available
@@ -116,4 +119,6 @@ def load_session(instance_id: Optional[str] = None) -> SessionData:
     except Exception as exc:  # noqa: BLE001 - surface helpful error
         raise ValueError(f"Malformed session file at {candidate_path}: {exc}") from exc
 
-    return SessionData(instance_id=instance_id, session_token=session_token, raw=payload, path=candidate_path)
+    return SessionData(
+        instance_id=instance_id, session_token=session_token, raw=payload, path=candidate_path
+    )

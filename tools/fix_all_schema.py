@@ -4,13 +4,13 @@
 프로젝트 전체의 SQL 쿼리를 스캔하고 수정
 """
 
-import os
 import re
 import sys
 from pathlib import Path
-from typing import List, Dict, Tuple
+from typing import Dict
 import shutil
 from datetime import datetime
+
 
 class SchemaFixer:
     """SQL 스키마 불일치를 자동으로 수정하는 클래스"""
@@ -24,29 +24,27 @@ class SchemaFixer:
         # SQL 쿼리 패턴과 대체 규칙 정의
         self.replacements = {
             # instances 테이블 - 'id' -> 'instance_id'
-            r'\bWHERE\s+id\s*=': 'WHERE instance_id =',
-            r'\bWHERE\s+id\s+IN': 'WHERE instance_id IN',
-            r'\bAND\s+id\s*=': 'AND instance_id =',
-            r'\bOR\s+id\s*=': 'OR instance_id =',
-            r'SELECT\s+id\s+FROM\s+instances': 'SELECT instance_id FROM instances',
-            r'SELECT\s+id,': 'SELECT instance_id,',
-            r'SELECT\s+\*\s+FROM\s+instances\s+WHERE\s+id': 'SELECT * FROM instances WHERE instance_id',
-            r'DELETE\s+FROM\s+instances\s+WHERE\s+id': 'DELETE FROM instances WHERE instance_id',
-            r'UPDATE\s+instances\s+SET\s+(.*?)\s+WHERE\s+id': r'UPDATE instances SET \1 WHERE instance_id',
-            r'INSERT\s+INTO\s+instances\s*\(\s*id,': 'INSERT INTO instances (instance_id,',
-            r'INSERT\s+OR\s+REPLACE\s+INTO\s+instances\s*\(\s*id,': 'INSERT OR REPLACE INTO instances (instance_id,',
-            r'instances\s*\(\s*id\s*\)': 'instances (instance_id)',
+            r"\bWHERE\s+id\s*=": "WHERE instance_id =",
+            r"\bWHERE\s+id\s+IN": "WHERE instance_id IN",
+            r"\bAND\s+id\s*=": "AND instance_id =",
+            r"\bOR\s+id\s*=": "OR instance_id =",
+            r"SELECT\s+id\s+FROM\s+instances": "SELECT instance_id FROM instances",
+            r"SELECT\s+id,": "SELECT instance_id,",
+            r"SELECT\s+\*\s+FROM\s+instances\s+WHERE\s+id": "SELECT * FROM instances WHERE instance_id",
+            r"DELETE\s+FROM\s+instances\s+WHERE\s+id": "DELETE FROM instances WHERE instance_id",
+            r"UPDATE\s+instances\s+SET\s+(.*?)\s+WHERE\s+id": r"UPDATE instances SET \1 WHERE instance_id",
+            r"INSERT\s+INTO\s+instances\s*\(\s*id,": "INSERT INTO instances (instance_id,",
+            r"INSERT\s+OR\s+REPLACE\s+INTO\s+instances\s*\(\s*id,": "INSERT OR REPLACE INTO instances (instance_id,",
+            r"instances\s*\(\s*id\s*\)": "instances (instance_id)",
             r'"id"\s*=\s*\?': '"instance_id" = ?',
             r"'id'\s*=\s*\?": "'instance_id' = ?",
-
             # sessions 테이블 - 'token_hash' -> 'session_token_hash'
-            r'\btoken_hash\b': 'session_token_hash',
+            r"\btoken_hash\b": "session_token_hash",
             r'"token_hash"': '"session_token_hash"',
             r"'token_hash'": "'session_token_hash'",
-
             # name_history 테이블
-            r'\bold_id\b': 'old_instance_id',
-            r'\bnew_id\b': 'new_instance_id',
+            r"\bold_id\b": "old_instance_id",
+            r"\bnew_id\b": "new_instance_id",
             r'"old_id"': '"old_instance_id"',
             r'"new_id"': '"new_instance_id"',
         }
@@ -76,7 +74,7 @@ class SchemaFixer:
         if not self.backup:
             return
 
-        backup_dir = filepath.parent / 'backup'
+        backup_dir = filepath.parent / "backup"
         backup_dir.mkdir(exist_ok=True)
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -89,7 +87,7 @@ class SchemaFixer:
         """단일 파일의 SQL 쿼리 수정"""
         try:
             # 파일 읽기
-            with open(filepath, 'r', encoding='utf-8') as f:
+            with open(filepath, "r", encoding="utf-8") as f:
                 content = f.read()
 
             original_content = content
@@ -115,7 +113,7 @@ class SchemaFixer:
                 self.backup_file(filepath)
 
                 # 수정된 내용 저장
-                with open(filepath, 'w', encoding='utf-8') as f:
+                with open(filepath, "w", encoding="utf-8") as f:
                     f.write(content)
 
                 self.fixed_files.append(filepath)
@@ -139,9 +137,9 @@ class SchemaFixer:
 
         # Python 파일 찾기
         py_files = []
-        for filepath in root_dir.rglob('*.py'):
+        for filepath in root_dir.rglob("*.py"):
             # 제외할 디렉토리
-            if any(skip in str(filepath) for skip in ['venv', '__pycache__', 'backup', '.git']):
+            if any(skip in str(filepath) for skip in ["venv", "__pycache__", "backup", ".git"]):
                 continue
             py_files.append(filepath)
 
@@ -158,19 +156,19 @@ class SchemaFixer:
                 for change in self.changes_made[filepath]:
                     print(f"    - {change}")
             else:
-                print(f"  ⏭️  No changes needed")
+                print("  ⏭️  No changes needed")
 
         return self.generate_report()
 
     def generate_report(self) -> Dict:
         """수정 결과 리포트 생성"""
         report = {
-            'total_files_checked': len(self.fixed_files) + len(self.error_files),
-            'files_fixed': len(self.fixed_files),
-            'files_with_errors': len(self.error_files),
-            'fixed_files': self.fixed_files,
-            'error_files': self.error_files,
-            'changes': self.changes_made
+            "total_files_checked": len(self.fixed_files) + len(self.error_files),
+            "files_fixed": len(self.fixed_files),
+            "files_with_errors": len(self.error_files),
+            "fixed_files": self.fixed_files,
+            "error_files": self.error_files,
+            "changes": self.changes_made,
         }
 
         print("\n" + "=" * 60)
@@ -199,14 +197,14 @@ class SchemaFixer:
         # 수정된 파일들에서 문제가 되는 패턴이 남아있는지 확인
         issues = []
         problem_patterns = [
-            r'DELETE\s+FROM\s+instances\s+WHERE\s+id\s*=',
-            r'UPDATE\s+instances.*WHERE\s+id\s*=',
-            r'SELECT\s+id\s+FROM\s+instances',
-            r'\btoken_hash\b(?!\s*:)',  # token_hash (딕셔너리 키가 아닌 경우)
+            r"DELETE\s+FROM\s+instances\s+WHERE\s+id\s*=",
+            r"UPDATE\s+instances.*WHERE\s+id\s*=",
+            r"SELECT\s+id\s+FROM\s+instances",
+            r"\btoken_hash\b(?!\s*:)",  # token_hash (딕셔너리 키가 아닌 경우)
         ]
 
         for filepath in self.fixed_files:
-            with open(filepath, 'r', encoding='utf-8') as f:
+            with open(filepath, "r", encoding="utf-8") as f:
                 content = f.read()
 
             for pattern in problem_patterns:
@@ -231,7 +229,7 @@ def main():
 
     # 명령줄 인수 처리
     backup = True
-    if len(sys.argv) > 1 and sys.argv[1] == '--no-backup':
+    if len(sys.argv) > 1 and sys.argv[1] == "--no-backup":
         backup = False
         print("⚠️ Running without backup (--no-backup flag)")
     else:
@@ -241,7 +239,7 @@ def main():
 
     # 사용자 확인
     response = input("Do you want to proceed? (y/N): ")
-    if response.lower() != 'y':
+    if response.lower() != "y":
         print("❌ Operation cancelled")
         return
 
@@ -250,13 +248,13 @@ def main():
     report = fixer.fix_all_files()
 
     # 검증 실행
-    if report['files_fixed'] > 0:
+    if report["files_fixed"] > 0:
         fixer.verify_fixes()
 
     print("\n✨ Schema fix complete!")
 
     # 추가 권장사항
-    if report['files_fixed'] > 0:
+    if report["files_fixed"] > 0:
         print("\n📌 Next steps:")
         print("1. Test the IPC system: python tools/ipc_test.py")
         print("2. Run the schema validator: python tools/schema_validator.py")

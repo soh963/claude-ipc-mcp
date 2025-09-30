@@ -35,7 +35,9 @@ def run_quick_chat(agent_a: str, agent_b: str, message: str, timeout: int, monit
     run_command(cmd)
 
 
-def run_continuous_chat(agent_a: str, agent_b: str, message: str, duration: int, max_turns: int) -> None:
+def run_continuous_chat(
+    agent_a: str, agent_b: str, message: str, duration: int, max_turns: int
+) -> None:
     tokens = message.split()
     cmd = [
         PYTHON,
@@ -75,11 +77,13 @@ def extract_message(prompt: str) -> str:
     for idx, token in enumerate(tokens):
         if "메시지" in token:
             start = max(0, idx - 1)
-            candidate = " ".join(tokens[start:idx + 1])
+            candidate = " ".join(tokens[start : idx + 1])
             candidate = candidate.replace("메시지를", "메시지").replace("메시지로", "메시지")
             return candidate.strip()
 
-    match = re.search(r"(?:메시지|말해|전달|message|send)\s*(?:를|을|해|해줘|:)?\s*(.+)", prompt, re.IGNORECASE)
+    match = re.search(
+        r"(?:메시지|말해|전달|message|send)\s*(?:를|을|해|해줘|:)?\s*(.+)", prompt, re.IGNORECASE
+    )
     if match:
         return match.group(1).strip()
     return "Hello from the natural language interface!"
@@ -115,8 +119,12 @@ def determine_mode(prompt: str) -> str:
 
 
 def parse_args(argv: Iterable[str]) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Launch an IPC chat using natural language instructions.")
-    parser.add_argument("prompt", nargs="+", help="Natural language description of the desired chat flow.")
+    parser = argparse.ArgumentParser(
+        description="Launch an IPC chat using natural language instructions."
+    )
+    parser.add_argument(
+        "prompt", nargs="+", help="Natural language description of the desired chat flow."
+    )
     parser.add_argument(
         "--dry-run",
         action="store_true",

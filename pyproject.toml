@@ -22,9 +22,9 @@ dependencies = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/jdez427/claude-ipc-mcp"
-"Bug Tracker" = "https://github.com/jdez427/claude-ipc-mcp/issues"
-"Documentation" = "https://github.com/jdez427/claude-ipc-mcp/tree/main/docs"
+"Homepage" = "https://github.com/soh963/claude-ipc-mcp"
+"Bug Tracker" = "https://github.com/soh963/claude-ipc-mcp/issues"
+"Documentation" = "https://github.com/soh963/claude-ipc-mcp/tree/main/docs"
 
 [project.scripts]
 claude-ipc-mcp = "claude_ipc_server:main"
@@ -44,11 +44,18 @@ dev-dependencies = [
     "black>=24.0.0",
     "mypy>=1.0.0",
     "ruff>=0.4.0",
+    "pytest>=8.0.0",
+    "pytest-cov>=5.0.0",
+    "pre-commit>=3.7.0",
 ]
 
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+exclude = [
+    "backup/**",
+    "%SystemDrive%/**",
+]
 
 [tool.black]
 line-length = 100

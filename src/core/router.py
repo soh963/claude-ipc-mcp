@@ -14,7 +14,7 @@ import hashlib
 import socket
 import threading
 import time
-from typing import Dict, Optional, Any, List
+from typing import Dict, Optional, List
 from dataclasses import dataclass
 from enum import Enum
 import logging
@@ -26,6 +26,7 @@ logger = logging.getLogger(__name__)
 
 class CommunicationMode(Enum):
     """Communication modes for the router"""
+
     GLOBAL = "global"
     PROJECT = "project"
     HYBRID = "hybrid"
@@ -34,6 +35,7 @@ class CommunicationMode(Enum):
 @dataclass
 class RouteConfig:
     """Configuration for routing"""
+
     mode: CommunicationMode
     global_port: int = 9876
     project_port_range: tuple = (9000, 9999)
@@ -52,7 +54,7 @@ class ProjectIdentifier:
             path = os.getcwd()
 
         # Normalize path
-        path = os.path.abspath(path).replace('\\', '/').lower()
+        path = os.path.abspath(path).replace("\\", "/").lower()
 
         # Generate hash
         hash_obj = hashlib.sha256(path.encode())
@@ -77,9 +79,9 @@ class RoutingTable:
         """Add a route to the table"""
         with self.lock:
             self.routes[instance_id] = {
-                'project_id': project_id,
-                'address': address,
-                'last_seen': time.time()
+                "project_id": project_id,
+                "address": address,
+                "last_seen": time.time(),
             }
 
     def get_route(self, instance_id: str) -> Optional[Dict]:
@@ -91,8 +93,7 @@ class RoutingTable:
         """Get all instances in a project"""
         with self.lock:
             return [
-                inst_id for inst_id, info in self.routes.items()
-                if info['project_id'] == project_id
+                inst_id for inst_id, info in self.routes.items() if info["project_id"] == project_id
             ]
 
     def cleanup_stale_routes(self, timeout: int = 300):
@@ -100,8 +101,9 @@ class RoutingTable:
         with self.lock:
             current_time = time.time()
             stale = [
-                inst_id for inst_id, info in self.routes.items()
-                if current_time - info['last_seen'] > timeout
+                inst_id
+                for inst_id, info in self.routes.items()
+                if current_time - info["last_seen"] > timeout
             ]
             for inst_id in stale:
                 del self.routes[inst_id]
@@ -122,7 +124,7 @@ class MessageBroker:
         """Start the broker"""
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.socket.bind(('127.0.0.1', self.port))
+        self.socket.bind(("127.0.0.1", self.port))
         self.socket.listen(5)
         self.running = True
 
@@ -137,9 +139,7 @@ class MessageBroker:
             try:
                 client, addr = self.socket.accept()
                 threading.Thread(
-                    target=self._handle_client,
-                    args=(client, addr),
-                    daemon=True
+                    target=self._handle_client, args=(client, addr), daemon=True
                 ).start()
             except Exception as e:
                 if self.running:
@@ -161,54 +161,49 @@ class MessageBroker:
     def process_message(self, message: Dict) -> Dict:
         """Process a message"""
         # Basic message processing
-        msg_type = message.get('type')
+        msg_type = message.get("type")
 
-        if msg_type == 'register':
+        if msg_type == "register":
             return self._handle_register(message)
-        elif msg_type == 'send':
+        elif msg_type == "send":
             return self._handle_send(message)
-        elif msg_type == 'check':
+        elif msg_type == "check":
             return self._handle_check(message)
         else:
-            return {'status': 'error', 'message': 'Unknown message type'}
+            return {"status": "error", "message": "Unknown message type"}
 
     def _handle_register(self, message: Dict) -> Dict:
         """Handle registration"""
-        instance_id = message.get('instance_id')
+        instance_id = message.get("instance_id")
         with self.lock:
-            self.clients[instance_id] = {
-                'registered': time.time(),
-                'messages': []
-            }
-        return {'status': 'ok', 'message': f'Registered {instance_id}'}
+            self.clients[instance_id] = {"registered": time.time(), "messages": []}
+        return {"status": "ok", "message": f"Registered {instance_id}"}
 
     def _handle_send(self, message: Dict) -> Dict:
         """Handle send message"""
-        to_id = message.get('to_id')
-        from_id = message.get('from_id')
-        content = message.get('content')
+        to_id = message.get("to_id")
+        from_id = message.get("from_id")
+        content = message.get("content")
 
         with self.lock:
             if to_id in self.clients:
-                self.clients[to_id]['messages'].append({
-                    'from': from_id,
-                    'content': content,
-                    'timestamp': time.time()
-                })
-                return {'status': 'ok', 'message': 'Message sent'}
+                self.clients[to_id]["messages"].append(
+                    {"from": from_id, "content": content, "timestamp": time.time()}
+                )
+                return {"status": "ok", "message": "Message sent"}
             else:
-                return {'status': 'error', 'message': 'Recipient not found'}
+                return {"status": "error", "message": "Recipient not found"}
 
     def _handle_check(self, message: Dict) -> Dict:
         """Handle check messages"""
-        instance_id = message.get('instance_id')
+        instance_id = message.get("instance_id")
         with self.lock:
             if instance_id in self.clients:
-                messages = self.clients[instance_id]['messages']
-                self.clients[instance_id]['messages'] = []
-                return {'status': 'ok', 'messages': messages}
+                messages = self.clients[instance_id]["messages"]
+                self.clients[instance_id]["messages"] = []
+                return {"status": "ok", "messages": messages}
             else:
-                return {'status': 'error', 'message': 'Not registered'}
+                return {"status": "error", "message": "Not registered"}
 
     def stop(self):
         """Stop the broker"""
@@ -234,10 +229,7 @@ class GlobalMessageRouter:
 
         if self.config.mode in [CommunicationMode.GLOBAL, CommunicationMode.HYBRID]:
             # Start global broker
-            self.global_broker = MessageBroker(
-                self.config.global_port,
-                project_id="GLOBAL"
-            )
+            self.global_broker = MessageBroker(self.config.global_port, project_id="GLOBAL")
             self.global_broker.start()
 
         if self.config.mode in [CommunicationMode.PROJECT, CommunicationMode.HYBRID]:
@@ -260,49 +252,49 @@ class GlobalMessageRouter:
 
     def route_message(self, message: Dict) -> Dict:
         """Route a message based on scope and permissions"""
-        scope = message.get('scope', 'project')
+        scope = message.get("scope", "project")
 
         # Audit logging
         if self.config.enable_audit:
             self._audit_log(message)
 
         # Route based on scope
-        if scope == 'global':
+        if scope == "global":
             if self.config.mode == CommunicationMode.PROJECT:
-                return {'status': 'error', 'message': 'Global communication disabled'}
+                return {"status": "error", "message": "Global communication disabled"}
             return self._route_global(message)
 
-        elif scope == 'project':
+        elif scope == "project":
             return self._route_project(message)
 
-        elif scope == 'cross':
+        elif scope == "cross":
             if self.config.mode != CommunicationMode.HYBRID:
-                return {'status': 'error', 'message': 'Cross-project communication disabled'}
+                return {"status": "error", "message": "Cross-project communication disabled"}
             return self._route_cross_project(message)
 
         else:
-            return {'status': 'error', 'message': 'Invalid scope'}
+            return {"status": "error", "message": "Invalid scope"}
 
     def _route_global(self, message: Dict) -> Dict:
         """Route to global broker"""
         if self.global_broker:
             return self.global_broker.process_message(message)
-        return {'status': 'error', 'message': 'Global broker not available'}
+        return {"status": "error", "message": "Global broker not available"}
 
     def _route_project(self, message: Dict) -> Dict:
         """Route to project broker"""
-        project_id = message.get('project_id', ProjectIdentifier.get_project_id())
+        project_id = message.get("project_id", ProjectIdentifier.get_project_id())
         broker = self._get_or_create_project_broker(project_id)
         return broker.process_message(message)
 
     def _route_cross_project(self, message: Dict) -> Dict:
         """Route cross-project with permission check"""
-        target_project = message.get('target_project')
+        target_project = message.get("target_project")
 
         # Check if target project is allowed
         if self.config.allowed_projects:
             if target_project not in self.config.allowed_projects:
-                return {'status': 'error', 'message': 'Target project not allowed'}
+                return {"status": "error", "message": "Target project not allowed"}
 
         # Route to target project broker
         broker = self._get_or_create_project_broker(target_project)
@@ -311,11 +303,11 @@ class GlobalMessageRouter:
     def _audit_log(self, message: Dict):
         """Log message for audit"""
         log_entry = {
-            'timestamp': time.time(),
-            'scope': message.get('scope'),
-            'from': message.get('from_id'),
-            'to': message.get('to_id'),
-            'project': message.get('project_id')
+            "timestamp": time.time(),
+            "scope": message.get("scope"),
+            "from": message.get("from_id"),
+            "to": message.get("to_id"),
+            "project": message.get("project_id"),
         }
         self.audit_log.append(log_entry)
 
@@ -340,22 +332,22 @@ class GlobalMessageRouter:
     def get_status(self) -> Dict:
         """Get router status"""
         return {
-            'mode': self.config.mode.value,
-            'global_broker': 'running' if self.global_broker else 'stopped',
-            'project_brokers': len(self.project_brokers),
-            'routes': len(self.routing_table.routes),
-            'audit_entries': len(self.audit_log)
+            "mode": self.config.mode.value,
+            "global_broker": "running" if self.global_broker else "stopped",
+            "project_brokers": len(self.project_brokers),
+            "routes": len(self.routing_table.routes),
+            "audit_entries": len(self.audit_log),
         }
 
 
 def create_router_from_env() -> GlobalMessageRouter:
     """Create router based on environment variables"""
-    mode_str = os.getenv('IPC_GLOBAL_MODE', 'false').lower()
-    hybrid_str = os.getenv('IPC_HYBRID_MODE', 'false').lower()
+    mode_str = os.getenv("IPC_GLOBAL_MODE", "false").lower()
+    hybrid_str = os.getenv("IPC_HYBRID_MODE", "false").lower()
 
-    if hybrid_str == 'true':
+    if hybrid_str == "true":
         mode = CommunicationMode.HYBRID
-    elif mode_str == 'true':
+    elif mode_str == "true":
         mode = CommunicationMode.GLOBAL
     else:
         mode = CommunicationMode.PROJECT
@@ -363,15 +355,15 @@ def create_router_from_env() -> GlobalMessageRouter:
     # Parse allowed projects
     allowed_projects = None
     if mode == CommunicationMode.HYBRID:
-        projects_str = os.getenv('IPC_ALLOWED_PROJECTS', '')
+        projects_str = os.getenv("IPC_ALLOWED_PROJECTS", "")
         if projects_str:
-            allowed_projects = projects_str.split(',')
+            allowed_projects = projects_str.split(",")
 
     config = RouteConfig(
         mode=mode,
-        global_port=int(os.getenv('IPC_GLOBAL_PORT', '9876')),
+        global_port=int(os.getenv("IPC_GLOBAL_PORT", "9876")),
         allowed_projects=allowed_projects,
-        enable_audit=os.getenv('IPC_ENABLE_AUDIT', 'true').lower() == 'true'
+        enable_audit=os.getenv("IPC_ENABLE_AUDIT", "true").lower() == "true",
     )
 
     return GlobalMessageRouter(config)

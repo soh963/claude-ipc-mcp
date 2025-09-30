@@ -8,59 +8,53 @@ import sqlite3
 import sys
 import re
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, Optional
 from datetime import datetime
 import json
+
 
 class SchemaValidator:
     """데이터베이스 스키마 검증기"""
 
     # 예상되는 스키마 정의 (실제 데이터베이스 구조에 맞춤)
     EXPECTED_SCHEMA = {
-        'instances': {
-            'columns': {
-                'instance_id': 'TEXT PRIMARY KEY',
-                'last_seen': 'TEXT'
-            },
-            'required': ['instance_id', 'last_seen']
+        "instances": {
+            "columns": {"instance_id": "TEXT PRIMARY KEY", "last_seen": "TEXT"},
+            "required": ["instance_id", "last_seen"],
         },
-        'sessions': {
-            'columns': {
-                'session_token_hash': 'TEXT PRIMARY KEY',
-                'instance_id': 'TEXT',
-                'created_at': 'TEXT',
-                'expires_at': 'TEXT'
+        "sessions": {
+            "columns": {
+                "session_token_hash": "TEXT PRIMARY KEY",
+                "instance_id": "TEXT",
+                "created_at": "TEXT",
+                "expires_at": "TEXT",
             },
-            'required': ['session_token_hash', 'instance_id', 'created_at', 'expires_at']
+            "required": ["session_token_hash", "instance_id", "created_at", "expires_at"],
         },
-        'messages': {
-            'columns': {
-                'id': 'INTEGER PRIMARY KEY',
-                'from_id': 'TEXT',
-                'to_id': 'TEXT',
-                'content': 'TEXT',
-                'timestamp': 'TEXT',
-                'read_flag': 'INTEGER',
-                'is_read': 'INTEGER',
-                'data': 'TEXT',
-                'summary': 'TEXT',
-                'large_file_path': 'TEXT'
+        "messages": {
+            "columns": {
+                "id": "INTEGER PRIMARY KEY",
+                "from_id": "TEXT",
+                "to_id": "TEXT",
+                "content": "TEXT",
+                "timestamp": "TEXT",
+                "read_flag": "INTEGER",
+                "is_read": "INTEGER",
+                "data": "TEXT",
+                "summary": "TEXT",
+                "large_file_path": "TEXT",
             },
-            'required': ['id', 'from_id', 'to_id', 'content', 'timestamp', 'read_flag']
+            "required": ["id", "from_id", "to_id", "content", "timestamp", "read_flag"],
         },
-        'name_history': {
-            'columns': {
-                'old_name': 'TEXT PRIMARY KEY',
-                'new_name': 'TEXT',
-                'changed_at': 'TEXT'
-            },
-            'required': ['old_name', 'new_name', 'changed_at']
-        }
+        "name_history": {
+            "columns": {"old_name": "TEXT PRIMARY KEY", "new_name": "TEXT", "changed_at": "TEXT"},
+            "required": ["old_name", "new_name", "changed_at"],
+        },
     }
 
     def __init__(self, db_path: Optional[str] = None):
         if db_path is None:
-            self.db_path = Path.home() / '.claude-ipc-data' / 'messages.db'
+            self.db_path = Path.home() / ".claude-ipc-data" / "messages.db"
         else:
             self.db_path = Path(db_path)
 
@@ -92,10 +86,7 @@ class SchemaValidator:
             cursor.execute(f"PRAGMA table_info({table_name})")
             columns = cursor.fetchall()
 
-            actual_schema[table_name] = {
-                'columns': {},
-                'column_list': []
-            }
+            actual_schema[table_name] = {"columns": {}, "column_list": []}
 
             for col in columns:
                 col_name = col[1]
@@ -104,13 +95,13 @@ class SchemaValidator:
                 col_default = col[4]
                 col_pk = col[5]
 
-                actual_schema[table_name]['columns'][col_name] = {
-                    'type': col_type,
-                    'notnull': col_notnull,
-                    'default': col_default,
-                    'pk': col_pk
+                actual_schema[table_name]["columns"][col_name] = {
+                    "type": col_type,
+                    "notnull": col_notnull,
+                    "default": col_default,
+                    "pk": col_pk,
                 }
-                actual_schema[table_name]['column_list'].append(col_name)
+                actual_schema[table_name]["column_list"].append(col_name)
 
         conn.close()
         return actual_schema
@@ -124,13 +115,15 @@ class SchemaValidator:
             return False
 
         actual_table = actual[table_name]
-        expected_columns = expected['required']
-        actual_columns = actual_table['column_list']
+        expected_columns = expected["required"]
+        actual_columns = actual_table["column_list"]
 
         # 필수 컬럼 확인
         missing_columns = set(expected_columns) - set(actual_columns)
         if missing_columns:
-            self.issues.append(f"❌ Table '{table_name}' missing required columns: {missing_columns}")
+            self.issues.append(
+                f"❌ Table '{table_name}' missing required columns: {missing_columns}"
+            )
             is_valid = False
 
         # 추가 컬럼 확인 (경고만)
@@ -141,8 +134,10 @@ class SchemaValidator:
         # 컬럼 타입 확인 (정보만)
         for col_name in expected_columns:
             if col_name in actual_columns:
-                actual_col = actual_table['columns'][col_name]
-                self.info.append(f"ℹ️ {table_name}.{col_name}: {actual_col['type']} (PK: {actual_col['pk']})")
+                actual_col = actual_table["columns"][col_name]
+                self.info.append(
+                    f"ℹ️ {table_name}.{col_name}: {actual_col['type']} (PK: {actual_col['pk']})"
+                )
 
         return is_valid
 
@@ -196,7 +191,7 @@ class SchemaValidator:
                 print(f"  {warning}")
 
         # 정보
-        if self.info and '--verbose' in sys.argv:
+        if self.info and "--verbose" in sys.argv:
             print("\nℹ️ SCHEMA DETAILS:")
             for info in self.info:
                 print(f"  {info}")
@@ -232,8 +227,11 @@ class SchemaValidator:
 
                     for col in columns:
                         col = col.strip()
-                        if table in self.EXPECTED_SCHEMA and col in self.EXPECTED_SCHEMA[table]['columns']:
-                            col_type = self.EXPECTED_SCHEMA[table]['columns'][col]
+                        if (
+                            table in self.EXPECTED_SCHEMA
+                            and col in self.EXPECTED_SCHEMA[table]["columns"]
+                        ):
+                            col_type = self.EXPECTED_SCHEMA[table]["columns"][col]
                             fix_script.append(f"ALTER TABLE {table} ADD COLUMN {col} {col_type};")
 
             elif "Table" in issue and "is missing" in issue:
@@ -242,9 +240,13 @@ class SchemaValidator:
                 if table_match:
                     table = table_match.group(1)
                     if table in self.EXPECTED_SCHEMA:
-                        columns = self.EXPECTED_SCHEMA[table]['columns']
+                        columns = self.EXPECTED_SCHEMA[table]["columns"]
                         col_defs = [f"{col} {type_}" for col, type_ in columns.items()]
-                        create_sql = f"CREATE TABLE IF NOT EXISTS {table} (\n  " + ",\n  ".join(col_defs) + "\n);"
+                        create_sql = (
+                            f"CREATE TABLE IF NOT EXISTS {table} (\n  "
+                            + ",\n  ".join(col_defs)
+                            + "\n);"
+                        )
                         fix_script.append(create_sql)
 
         return "\n".join(fix_script) if len(fix_script) > 2 else None
@@ -268,7 +270,7 @@ class SchemaValidator:
 
         # 사용자 확인
         response = input("\nApply these fixes? (y/N): ")
-        if response.lower() != 'y':
+        if response.lower() != "y":
             print("❌ Auto-fix cancelled")
             return False
 
@@ -298,16 +300,16 @@ class SchemaValidator:
             filename = f"schema_validation_{timestamp}.json"
 
         report = {
-            'timestamp': datetime.now().isoformat(),
-            'database': str(self.db_path),
-            'status': 'PASS' if not self.issues else 'FAIL',
-            'issues': self.issues,
-            'warnings': self.warnings,
-            'info': self.info,
-            'actual_schema': self.get_actual_schema() if self.db_path.exists() else None
+            "timestamp": datetime.now().isoformat(),
+            "database": str(self.db_path),
+            "status": "PASS" if not self.issues else "FAIL",
+            "issues": self.issues,
+            "warnings": self.warnings,
+            "info": self.info,
+            "actual_schema": self.get_actual_schema() if self.db_path.exists() else None,
         }
 
-        with open(filename, 'w', encoding='utf-8') as f:
+        with open(filename, "w", encoding="utf-8") as f:
             json.dump(report, f, indent=2, ensure_ascii=False)
 
         print(f"\n📄 Report saved to: {filename}")
@@ -318,11 +320,13 @@ def main():
     """메인 실행 함수"""
     import argparse
 
-    parser = argparse.ArgumentParser(description='Database Schema Validator for IPC System')
-    parser.add_argument('--db', type=str, help='Path to database file')
-    parser.add_argument('--verbose', action='store_true', help='Show detailed schema information')
-    parser.add_argument('--auto-fix', action='store_true', help='Attempt to fix issues automatically')
-    parser.add_argument('--export', type=str, help='Export report to file')
+    parser = argparse.ArgumentParser(description="Database Schema Validator for IPC System")
+    parser.add_argument("--db", type=str, help="Path to database file")
+    parser.add_argument("--verbose", action="store_true", help="Show detailed schema information")
+    parser.add_argument(
+        "--auto-fix", action="store_true", help="Attempt to fix issues automatically"
+    )
+    parser.add_argument("--export", type=str, help="Export report to file")
 
     args = parser.parse_args()
 

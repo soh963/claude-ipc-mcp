@@ -36,7 +36,9 @@ def register_instance(instance_id: str, *, set_default: bool = True) -> None:
         sock.settimeout(5.0)
         sock.connect((BROKER_HOST, BROKER_PORT))
     except OSError as exc:
-        raise SystemExit(f"Error: Could not connect to broker at {BROKER_HOST}:{BROKER_PORT} ({exc}).")
+        raise SystemExit(
+            f"Error: Could not connect to broker at {BROKER_HOST}:{BROKER_PORT} ({exc})."
+        )
 
     try:
         payload = build_request(instance_id, shared_secret)

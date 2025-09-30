@@ -29,6 +29,39 @@ The Claude IPC MCP implements session-based authentication to prevent identity s
 
 ## Setup Instructions
 
+### Windows PowerShell (recommended on Windows)
+
+1. Set the shared secret for the current session:
+   ```powershell
+   $env:IPC_SHARED_SECRET = "your-strong-random-secret"
+   ```
+
+2. Persist the secret for your user profile:
+   ```powershell
+   [Environment]::SetEnvironmentVariable("IPC_SHARED_SECRET", "your-strong-random-secret", "User")
+   # restart PowerShell to apply
+   ```
+
+3. Verify:
+   ```powershell
+   $env:IPC_SHARED_SECRET
+   ```
+
+4. Register via CLI (auto):
+   - In your project folder:
+     ```powershell
+     ipc init   # creates .ipc/* and attempts broker registration using the secret
+     ipc status
+     ipc ping
+     ```
+   - First chat will auto-register if no session exists:
+     ```powershell
+     ipc chat --to <target-project> "Hello"
+     ```
+   - Session is stored per-project at `.ipc/state/session.json`.
+
+Note: The CLI computes an auth token as `sha256(f"{instance_id}:{IPC_SHARED_SECRET}")` and sends that during `register`. The broker validates this before issuing a session token.
+
 ### For Claude Code (MCP)
 
 1. Set the shared secret:
@@ -52,9 +85,10 @@ The Claude IPC MCP implements session-based authentication to prevent identity s
 
 2. Register your instance:
    ```bash
-   ./ipc_register.py fred
+   python tools/ipc_register.py fred
    ```
-   This creates `~/.ipc-session` with your session token
+   The global CLI stores session data in the project at `.ipc/state/session.json`.
+   Some legacy tooling may also write `~/.ipc-session` for compatibility.
 
 3. Use other scripts normally - they'll use the session token automatically
 
@@ -72,6 +106,11 @@ The Claude IPC MCP implements session-based authentication to prevent identity s
 2. Server validates: `sha256(instance_id:shared_secret)`
 3. Server generates session token and stores mapping
 4. Client receives session token for future requests
+
+CLI details:
+- `ipc init` attempts registration using the default instance id derived from the project path.
+- `ipc chat` will auto-register if no session exists, then send.
+- Both flows use the same auth token formula above.
 
 ### Message Flow
 1. Client includes session token in all requests

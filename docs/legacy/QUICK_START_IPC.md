@@ -48,6 +48,29 @@ python src/claude_ipc_server.py
 python tools/auto_register_all.py
 ```
 
+## ⚡ 최소 Quickstart (신규 CLI)
+
+다음 3단계면 기본 동작을 바로 확인할 수 있습니다.
+
+```powershell
+# 1) 프로젝트 디렉터리에서 초기화
+ipc init
+
+# 2) 상태 확인
+ipc status
+
+# 3) 핑
+ipc ping
+```
+
+메시지 전송은 다른 프로젝트에서도 동일하게 `ipc init` 후 아래처럼 사용할 수 있습니다.
+
+```powershell
+ipc chat --to <상대_프로젝트_폴더명> "Hello"
+```
+
+주의: 브로커는 필요 시 자동으로 기동되며, 최초 호출 직후 수백 ms 대기 후 준비됩니다. 보안을 위해 `IPC_SHARED_SECRET` 설정을 권장합니다. 설정 방법은 `docs/SECURITY.md`를 참고하세요.
+
 ## 🔧 필수 명령어
 
 ### IPC 시스템 시작

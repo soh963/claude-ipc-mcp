@@ -8,7 +8,6 @@ import os
 import time
 import socket
 import json
-import hashlib
 from typing import List, Dict, Any
 
 # Add parent directory to path
@@ -23,30 +22,30 @@ class AutoRegister:
     def __init__(self):
         self.project_id = get_project_id()
         self.project_port = get_project_port()
-        self.host = '127.0.0.1'
+        self.host = "127.0.0.1"
 
         # AI instances to register
         self.ai_instances = [
             {
-                'name': 'claude',
-                'description': 'Claude Code CLI - Architecture & Review',
-                'capabilities': ['architecture', 'code_review', 'documentation']
+                "name": "claude",
+                "description": "Claude Code CLI - Architecture & Review",
+                "capabilities": ["architecture", "code_review", "documentation"],
             },
             {
-                'name': 'gemini',
-                'description': 'Gemini CLI - Multi-modal & Testing',
-                'capabilities': ['testing', 'creative_solutions', 'multi_modal']
+                "name": "gemini",
+                "description": "Gemini CLI - Multi-modal & Testing",
+                "capabilities": ["testing", "creative_solutions", "multi_modal"],
             },
             {
-                'name': 'codex',
-                'description': 'Codex CLI - Code Generation',
-                'capabilities': ['code_generation', 'optimization', 'algorithms']
+                "name": "codex",
+                "description": "Codex CLI - Code Generation",
+                "capabilities": ["code_generation", "optimization", "algorithms"],
             },
             {
-                'name': 'lm',
-                'description': 'Local LM CLI - Privacy-first Processing',
-                'capabilities': ['local_processing', 'privacy', 'offline_work']
-            }
+                "name": "lm",
+                "description": "Local LM CLI - Privacy-first Processing",
+                "capabilities": ["local_processing", "privacy", "offline_work"],
+            },
         ]
 
     def _send_request(self, request: Dict[str, Any]) -> Dict[str, Any]:
@@ -56,76 +55,76 @@ class AutoRegister:
             sock.connect((self.host, self.project_port))
 
             # Send request
-            message = json.dumps(request) + '\n'
-            sock.sendall(message.encode('utf-8'))
+            message = json.dumps(request) + "\n"
+            sock.sendall(message.encode("utf-8"))
 
             # Receive response
-            response = b''
+            response = b""
             while True:
                 chunk = sock.recv(4096)
                 if not chunk:
                     break
                 response += chunk
-                if b'\n' in response:
+                if b"\n" in response:
                     break
 
             sock.close()
 
             # Parse response
             if response:
-                return json.loads(response.decode('utf-8').strip())
-            return {'status': 'error', 'message': 'No response'}
+                return json.loads(response.decode("utf-8").strip())
+            return {"status": "error", "message": "No response"}
 
         except ConnectionRefusedError:
             return {
-                'status': 'error',
-                'message': f'Cannot connect to IPC server on port {self.project_port}'
+                "status": "error",
+                "message": f"Cannot connect to IPC server on port {self.project_port}",
             }
         except Exception as e:
-            return {'status': 'error', 'message': str(e)}
+            return {"status": "error", "message": str(e)}
 
     def register_instance(self, ai_info: Dict[str, Any]) -> bool:
         """Register a single AI instance"""
-        name = ai_info['name']
+        name = ai_info["name"]
         formatted_name = format_instance_name(name)
 
         request = {
-            'action': 'register',
-            'name': name,
-            'metadata': {
-                'description': ai_info['description'],
-                'capabilities': ai_info['capabilities'],
-                'project_id': self.project_id
-            }
+            "action": "register",
+            "name": name,
+            "metadata": {
+                "description": ai_info["description"],
+                "capabilities": ai_info["capabilities"],
+                "project_id": self.project_id,
+            },
         }
 
         print(f"📝 Registering {formatted_name}...")
 
         response = self._send_request(request)
 
-        if response.get('status') == 'success':
-            token = response.get('token', 'N/A')
+        if response.get("status") == "success":
+            token = response.get("token", "N/A")
             print(f"✅ {formatted_name} registered successfully")
             print(f"   Token: {token[:8]}...")
             return True
         else:
-            error = response.get('message', 'Unknown error')
+            error = response.get("message", "Unknown error")
             print(f"❌ Failed to register {formatted_name}: {error}")
             return False
 
     def check_server_status(self) -> bool:
         """Check if IPC server is running"""
-        request = {'action': 'status'}
+        request = {"action": "status"}
         response = self._send_request(request)
-        return response.get('status') == 'success'
+        return response.get("status") == "success"
 
     def list_instances(self) -> List[str]:
         """List currently registered instances"""
-        request = {'action': 'list'}
+        request = {"action": "list"}
         response = self._send_request(request)
 
-        if response.get('status') == 'success':
-            instances = response.get('instances', {})
+        if response.get("status") == "success":
+            instances = response.get("instances", {})
             return list(instances.keys())
         return []
 
@@ -142,7 +141,7 @@ class AutoRegister:
         print("\n🔍 Checking IPC server status...")
         if not self.check_server_status():
             print("❌ IPC server is not running!")
-            print(f"   Please start it with: python src/claude_ipc_server.py")
+            print("   Please start it with: python src/claude_ipc_server.py")
             return {}
 
         print("✅ IPC server is running")
@@ -162,7 +161,7 @@ class AutoRegister:
         results = {}
 
         for ai_info in self.ai_instances:
-            name = ai_info['name']
+            name = ai_info["name"]
             formatted_name = format_instance_name(name)
 
             # Skip if already registered
@@ -235,9 +234,10 @@ def main():
     except Exception as e:
         print(f"\n❌ Error during registration: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

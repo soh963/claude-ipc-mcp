@@ -62,7 +62,7 @@
 ## Contributing
 
 Want to help implement these features? 
-- Check our [GitHub Issues](https://github.com/jdez427/claude-ipc-mcp/issues)
+- Check our [GitHub Issues](https://github.com/soh963/claude-ipc-mcp/issues)
 - Read the [Architecture Guide](ARCHITECTURE.md)
 - Submit PRs with tests
 

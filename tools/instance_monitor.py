@@ -5,13 +5,13 @@ Monitor messages for a specific instance without causing loops
 import sqlite3
 import time
 from pathlib import Path
-import sys
 import argparse
+
 
 class InstanceMonitor:
     def __init__(self, instance_id):
         self.instance_id = instance_id
-        self.db_path = Path.home() / '.claude-ipc-data' / 'messages.db'
+        self.db_path = Path.home() / ".claude-ipc-data" / "messages.db"
         self.last_check_id = 0
         self.seen_messages = set()
 
@@ -22,24 +22,30 @@ class InstanceMonitor:
             cursor = conn.cursor()
 
             # Get messages TO this instance
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT id, from_id, content, timestamp
                 FROM messages
                 WHERE to_id = ? AND id > ?
                 ORDER BY id
                 LIMIT 20
-            """, (self.instance_id, self.last_check_id))
+            """,
+                (self.instance_id, self.last_check_id),
+            )
 
             incoming = cursor.fetchall()
 
             # Get messages FROM this instance
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT id, to_id, content, timestamp
                 FROM messages
                 WHERE from_id = ? AND id > ?
                 ORDER BY id
                 LIMIT 20
-            """, (self.instance_id, self.last_check_id))
+            """,
+                (self.instance_id, self.last_check_id),
+            )
 
             outgoing = cursor.fetchall()
             conn.close()
@@ -84,7 +90,7 @@ class InstanceMonitor:
     def run(self):
         """Run the monitor"""
         print(f"📊 Monitoring: {self.instance_id}")
-        print("="*60)
+        print("=" * 60)
         print("Press Ctrl+C to stop")
         print()
 
@@ -97,7 +103,7 @@ class InstanceMonitor:
             if result and result[0]:
                 self.last_check_id = result[0]
             conn.close()
-        except:
+        except Exception:
             pass
 
         message_count = 0
@@ -127,13 +133,15 @@ class InstanceMonitor:
             print(f"\n✅ Stopped monitoring {self.instance_id}")
             print(f"Total messages: {message_count}")
 
+
 def main():
-    parser = argparse.ArgumentParser(description='Monitor IPC messages for an instance')
-    parser.add_argument('instance_id', help='Instance ID to monitor')
+    parser = argparse.ArgumentParser(description="Monitor IPC messages for an instance")
+    parser.add_argument("instance_id", help="Instance ID to monitor")
     args = parser.parse_args()
 
     monitor = InstanceMonitor(args.instance_id)
     monitor.run()
+
 
 if __name__ == "__main__":
     main()

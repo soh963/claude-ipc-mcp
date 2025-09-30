@@ -4,24 +4,23 @@ Complete IPC System Reset
 """
 
 import os
-import sys
 import subprocess
 import time
 import sqlite3
 from pathlib import Path
-import socket
+
 
 def main():
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("IPC SYSTEM COMPLETE RESET")
-    print("="*60)
+    print("=" * 60)
 
     # 1. Kill all Python processes (Windows)
     print("\n1. Terminating all Python processes...")
-    if os.name == 'nt':
-        subprocess.run('taskkill /F /IM python.exe 2>nul', shell=True, capture_output=True)
-        subprocess.run('taskkill /F /IM pythonw.exe 2>nul', shell=True, capture_output=True)
-    
+    if os.name == "nt":
+        subprocess.run("taskkill /F /IM python.exe 2>nul", shell=True, capture_output=True)
+        subprocess.run("taskkill /F /IM pythonw.exe 2>nul", shell=True, capture_output=True)
+
     print("   OK - All processes terminated")
     time.sleep(2)
 
@@ -53,9 +52,10 @@ def main():
         session_file.unlink()
         print("   OK - Session file removed")
 
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("SYSTEM RESET COMPLETE")
-    print("="*60)
+    print("=" * 60)
+
 
 if __name__ == "__main__":
     main()

@@ -12,7 +12,7 @@ Before you begin, ensure you have:
 ## Step 1: Clone the Repository
 
 ```bash
-git clone https://github.com/jdez427/claude-ipc-mcp.git
+git clone https://github.com/soh963/claude-ipc-mcp.git
 cd claude-ipc-mcp
 ```
 
@@ -117,4 +117,4 @@ After installation, run this test sequence:
 If you see your message, installation was successful!
 
 ---
-*Need help? Open an issue at https://github.com/jdez427/claude-ipc-mcp/issues*
+*Need help? Open an issue at https://github.com/soh963/claude-ipc-mcp/issues*

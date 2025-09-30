@@ -6,7 +6,6 @@ Provides project ID generation and port allocation based on project path
 
 import hashlib
 import os
-from pathlib import Path
 from typing import Optional
 
 
@@ -23,10 +22,10 @@ def get_project_id() -> str:
 
     # Normalize path for cross-platform consistency
     # Convert backslashes to forward slashes and lowercase
-    project_path = project_path.replace('\\', '/').lower()
+    project_path = project_path.replace("\\", "/").lower()
 
     # Generate SHA-256 hash of the path
-    hash_obj = hashlib.sha256(project_path.encode('utf-8'))
+    hash_obj = hashlib.sha256(project_path.encode("utf-8"))
     project_hash = hash_obj.hexdigest()[:8]  # Use first 8 characters
 
     return f"proj_{project_hash}"
@@ -44,7 +43,7 @@ def get_project_port() -> int:
 
     # Create MD5 hash of project ID for port calculation
     # MD5 is sufficient for port mapping (not security critical)
-    port_hash = hashlib.md5(project_id.encode('utf-8')).hexdigest()[:4]
+    port_hash = hashlib.md5(project_id.encode("utf-8")).hexdigest()[:4]
 
     # Convert first 4 hex characters to integer and map to range 0-999
     port_offset = int(port_hash, 16) % 1000
@@ -72,7 +71,7 @@ def get_project_path() -> str:
     """
     project_path = os.path.abspath(os.getcwd())
     # Normalize to forward slashes for consistency
-    return project_path.replace('\\', '/')
+    return project_path.replace("\\", "/")
 
 
 def validate_project_id(provided_id: str, expected_id: Optional[str] = None) -> bool:
@@ -100,11 +99,11 @@ def get_project_info() -> dict:
         dict: Dictionary containing all project isolation parameters
     """
     return {
-        'id': get_project_id(),
-        'name': get_project_name(),
-        'path': get_project_path(),
-        'port': get_project_port(),
-        'namespace': f"{get_project_id()}.ipc.local"
+        "id": get_project_id(),
+        "name": get_project_name(),
+        "path": get_project_path(),
+        "port": get_project_port(),
+        "namespace": f"{get_project_id()}.ipc.local",
     }
 
 
@@ -135,10 +134,10 @@ def parse_instance_name(full_name: str) -> tuple[str, str]:
     Returns:
         tuple: (base_name, project_id) or (full_name, '') if not formatted
     """
-    if '@' in full_name:
-        parts = full_name.split('@', 1)
+    if "@" in full_name:
+        parts = full_name.split("@", 1)
         return parts[0], parts[1]
-    return full_name, ''
+    return full_name, ""
 
 
 def is_same_project(instance_name: str, project_id: Optional[str] = None) -> bool:
@@ -181,21 +180,21 @@ def display_project_status() -> None:
 
 
 # CLI interface for testing
-if __name__ == '__main__':
+if __name__ == "__main__":
     import sys
 
     if len(sys.argv) > 1:
         command = sys.argv[1]
 
-        if command == 'info':
+        if command == "info":
             display_project_status()
-        elif command == 'id':
+        elif command == "id":
             print(get_project_id())
-        elif command == 'port':
+        elif command == "port":
             print(get_project_port())
-        elif command == 'name':
+        elif command == "name":
             print(get_project_name())
-        elif command == 'path':
+        elif command == "path":
             print(get_project_path())
         else:
             print(f"Unknown command: {command}")

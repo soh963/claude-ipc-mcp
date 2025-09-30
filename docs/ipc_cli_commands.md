@@ -23,6 +23,53 @@
 
 ## 명령어 레퍼런스
 
+### 통합 CLI (ipc_global_command.py)
+
+하나의 진입점으로 여러 관리 명령을 제공합니다. PowerShell/uv 환경에 따라 다음처럼 실행하세요.
+
+- PowerShell: `python tools/ipc_global_command.py …` 또는 `uv run python tools/ipc_global_command.py …`
+
+주요 하위 명령:
+
+- 메시지 질의응답: `ask`
+   - 사용: `... ask --to <대상인스턴스> [--timeout <초>] <메시지...>`
+   - 옵션:
+     - `--timeout <초>`: 응답을 기다리는 최대 시간(기본 10초 또는 구현 기본값)
+     - `--poll-interval <초>`: 응답 대기 중 DB 폴링 간격(기본 0.2초). 낮을수록 빠른 응답, CPU 사용 증가 가능.
+     - `--corr <id>`: 상관관계 ID를 직접 지정(선택)
+   - 동작: 브로커로 전송하고, 응답이 오면 출력합니다. 타임아웃 시 종료코드 30.
+   - 예시:
+      - `uv run python tools/ipc_global_command.py ask --to gemini "상태 어때?" --timeout 10 --poll-interval 0.1`
+      - `python tools/ipc_global_command.py ask --to gemini --corr my-123 "테스트"`
+
+ - 메시지 정리: `messages clear`
+    - 사용: `... messages clear --force`
+    - 동작: 현재 인스턴스의 inbox/outbox 레코드를 정리합니다. DB가 없으면 무해한 성공 처리.
+    - 예시:
+       - `python tools/ipc_global_command.py messages clear --force`
+
+- 인스턴스 관리: `instances`
+   - 초기화: `... instances reset` → 모든 세션 정리
+   - 삭제: `... instances delete <instance_id>` → 특정 인스턴스 세션/등록 삭제(존재하지 않아도 성공 처리)
+   - 예시:
+      - `uv run python tools/ipc_global_command.py instances reset`
+      - `python tools/ipc_global_command.py instances delete codex`
+
+- 자동 응답기: `responder`
+   - 시작: `... responder start <instance_id> [--policy simple|smart] [--detach]`
+      - Windows에서 백그라운드로 실행 시 PID를 `%USERPROFILE%\.claude-ipc-data\responders\<instance_id>.pid`에 기록합니다.
+   - 중지: `... responder stop <instance_id>`
+      - PID 파일이 있으면 종료를 시도하고, 없어도 안전하게 성공(멱등)
+   - 상태: `... responder status <instance_id>`
+      - 실행 여부와 PID, PID 파일 경로를 JSON으로 출력합니다. 실행 중이면 종료코드 0, 아니면 62.
+      - 추가 필드: `started_at`, `last_check_at`, `last_response_at`, `policy`(존재 시)
+      - 상태 파일 경로: `%USERPROFILE%\.claude-ipc-data\responders\<instance_id>.json`
+   - 예시:
+      - `uv run python tools/ipc_global_command.py responder start codex --detach`
+      - `python tools/ipc_global_command.py responder stop codex`
+      - `python tools/ipc_global_command.py responder status codex`
+      - 출력 예: `{ "instance_id":"codex","running":true,"pid":1234,"pid_file":"...","started_at":"2025-09-30T12:34:56","last_check_at":"2025-09-30T12:35:20","last_response_at":"2025-09-30T12:35:10","policy":"smart" }`
+
 ### 브로커 & 세션 관리
 
 | 명령어 | 위치 | 설명 | 예시 |
@@ -80,4 +127,6 @@
 - `IPC_CHAT` 환경 변수를 활용하면 다른 프로젝트 폴더에서도 `Invoke-Expression $env:IPC_CHAT --dry-run "codex가 gemini에게 '상태 보고' 요청"`처럼 자연어 기반 실행이 가능합니다.
 - PowerShell alias가 적용된 상태라면 `ipc-chat`, `ipc-ping`, `ipc-responder-*` 명령을 어느 위치에서든 사용할 수 있습니다.
 - 브로커가 응답하지 않을 때는 `tools/start_broker.py`를 다시 실행하거나 `tools/ipc_doctor.py`로 원인을 파악하세요.
+- 자동 응답 정책은 환경변수 `IPC_RESPONDER_POLICY`(예: `smart`)로 전역 적용할 수 있으며, `responder start --policy`로 인스턴스별 지정도 가능합니다.
+- 상태 JSON(`%USERPROFILE%\\.claude-ipc-data\\responders\\<instance>.json`)은 외부 모니터링/자동화 파이프라인에서 쉽게 파싱할 수 있습니다.
 - `broker_test_*` 인스턴스는 브로커 자동 헬스체크에서 생성됩니다. 목록을 정리하고 싶다면 브로커를 재시작하거나 `reset_all_ipc.py`를 실행하세요.

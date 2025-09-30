@@ -1,0 +1,132 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main", "**" ]
+  pull_request:
+    branches: [ "main" ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pre-commit:
+    name: Pre-commit (ubuntu-latest / py3.12)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Cache pre-commit
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pre-commit
+          key: ${{ runner.os }}-pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pre-commit-
+
+      - name: Run pre-commit
+        uses: pre-commit/action@v3.0.1
+        with:
+          extra_args: --all-files
+
+  lint-and-test:
+    name: Lint and Test (${{ matrix.os }} / py${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest, windows-latest, macos-latest ]
+        python-version: [ "3.12", "3.13" ]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v2
+
+      - name: Cache virtualenv (.venv)
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: ${{ runner.os }}-py${{ matrix.python-version }}-venv-${{ hashFiles('uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-py${{ matrix.python-version }}-venv-
+
+      - name: Sync dependencies
+        run: uv sync
+
+      - name: Ruff check
+        run: uv run ruff check src tools
+
+      - name: Black check
+        run: uv run black --check src tools
+
+      - name: Prepare report directory (cross-platform)
+        run: python -c "import os; os.makedirs('reports', exist_ok=True)"
+
+      - name: Pytest
+        run: uv run pytest -q --junitxml=reports/pytest-junit.xml
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-report-${{ matrix.os }}-py${{ matrix.python-version }}
+          path: reports/pytest-junit.xml
+
+  contract-tests:
+    name: Contract Tests (${{ matrix.os }} / py3.12)
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest, windows-latest ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v2
+
+      - name: Cache virtualenv (.venv)
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: ${{ runner.os }}-py3.12-venv-${{ hashFiles('uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-py3.12-venv-
+
+      - name: Sync dependencies
+        run: uv sync
+
+      - name: Prepare report directory (cross-platform)
+        run: python -c "import os; os.makedirs('reports', exist_ok=True)"
+
+      - name: Run contract tests only
+        run: uv run pytest -q --junitxml=reports/pytest-contract.xml tests/contract
+
+      - name: Upload contract test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: contract-report-${{ matrix.os }}-py3.12
+          path: reports/pytest-contract.xml

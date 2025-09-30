@@ -7,10 +7,9 @@ Claude IPC Manager - 통합 관리 유틸리티
 import sqlite3
 import sys
 import json
-import time
 from pathlib import Path
 from datetime import datetime
-from typing import Optional, List, Dict
+
 
 class IPCManager:
     """IPC 통합 관리 클래스"""
@@ -29,7 +28,8 @@ class IPCManager:
             cursor = conn.cursor()
 
             # 메시지 테이블 생성
-            cursor.execute("""
+            cursor.execute(
+                """
                 CREATE TABLE IF NOT EXISTS messages (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     from_id TEXT NOT NULL,
@@ -38,18 +38,23 @@ class IPCManager:
                     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
                     is_read INTEGER DEFAULT 0
                 )
-            """)
+            """
+            )
 
             # 인덱스 생성
-            cursor.execute("""
+            cursor.execute(
+                """
                 CREATE INDEX IF NOT EXISTS idx_messages_to_id
                 ON messages(to_id, timestamp)
-            """)
+            """
+            )
 
-            cursor.execute("""
+            cursor.execute(
+                """
                 CREATE INDEX IF NOT EXISTS idx_messages_from_id
                 ON messages(from_id, timestamp)
-            """)
+            """
+            )
 
             conn.commit()
             conn.close()
@@ -62,14 +67,14 @@ class IPCManager:
     def load_instances(self):
         """등록된 인스턴스 로드"""
         if self.instances_path.exists():
-            with open(self.instances_path, 'r', encoding='utf-8') as f:
+            with open(self.instances_path, "r", encoding="utf-8") as f:
                 self.instances = json.load(f)
         else:
             self.instances = {}
 
     def save_instances(self):
         """인스턴스 정보 저장"""
-        with open(self.instances_path, 'w', encoding='utf-8') as f:
+        with open(self.instances_path, "w", encoding="utf-8") as f:
             json.dump(self.instances, f, ensure_ascii=False, indent=2)
 
     def register_instance(self, instance_id: str):
@@ -79,9 +84,9 @@ class IPCManager:
             return False
 
         self.instances[instance_id] = {
-            'registered_at': datetime.now().isoformat(),
-            'last_active': datetime.now().isoformat(),
-            'message_count': 0
+            "registered_at": datetime.now().isoformat(),
+            "last_active": datetime.now().isoformat(),
+            "message_count": 0,
         }
         self.save_instances()
         print(f"✅ '{instance_id}' 인스턴스가 등록되었습니다.")
@@ -98,7 +103,7 @@ class IPCManager:
 
         # 관련 메시지도 삭제할지 확인
         response = input(f"'{instance_id}'의 모든 메시지도 삭제하시겠습니까? (y/n): ")
-        if response.lower() == 'y':
+        if response.lower() == "y":
             self.delete_instance_messages(instance_id)
 
         print(f"✅ '{instance_id}' 인스턴스가 삭제되었습니다.")
@@ -110,10 +115,13 @@ class IPCManager:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
 
-            cursor.execute("""
+            cursor.execute(
+                """
                 DELETE FROM messages
                 WHERE from_id = ? OR to_id = ?
-            """, (instance_id, instance_id))
+            """,
+                (instance_id, instance_id),
+            )
 
             deleted_count = cursor.rowcount
             conn.commit()
@@ -134,7 +142,9 @@ class IPCManager:
         print("=" * 60)
 
         for instance_id, info in self.instances.items():
-            registered_at = datetime.fromisoformat(info['registered_at']).strftime('%Y-%m-%d %H:%M:%S')
+            registered_at = datetime.fromisoformat(info["registered_at"]).strftime(
+                "%Y-%m-%d %H:%M:%S"
+            )
             print(f"  • {instance_id}")
             print(f"    등록일시: {registered_at}")
             print(f"    메시지수: {info.get('message_count', 0)}")
@@ -144,7 +154,7 @@ class IPCManager:
         """메시지 전송 (메시지 제한 적용)"""
         # 빈 메시지 체크
         if not content or not content.strip():
-            print(f"❌ 빈 메시지는 전송할 수 없습니다.")
+            print("❌ 빈 메시지는 전송할 수 없습니다.")
             return False
 
         try:
@@ -152,10 +162,13 @@ class IPCManager:
             cursor = conn.cursor()
 
             # 수신자의 현재 메시지 수 확인
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT COUNT(*) FROM messages
                 WHERE to_id = ?
-            """, (to_id,))
+            """,
+                (to_id,),
+            )
 
             message_count = cursor.fetchone()[0]
 
@@ -165,7 +178,8 @@ class IPCManager:
                 delete_count = message_count - max_messages + 1
 
                 # 가장 오래된 메시지들 삭제
-                cursor.execute("""
+                cursor.execute(
+                    """
                     DELETE FROM messages
                     WHERE to_id = ? AND id IN (
                         SELECT id FROM messages
@@ -173,17 +187,22 @@ class IPCManager:
                         ORDER BY timestamp ASC
                         LIMIT ?
                     )
-                """, (to_id, to_id, delete_count))
+                """,
+                    (to_id, to_id, delete_count),
+                )
 
                 deleted = cursor.rowcount
                 if deleted > 0:
                     print(f"   🗑️ {to_id}의 오래된 메시지 {deleted}개 자동 삭제")
 
             # 새 메시지 삽입
-            cursor.execute("""
+            cursor.execute(
+                """
                 INSERT INTO messages (from_id, to_id, content, timestamp)
                 VALUES (?, ?, ?, datetime('now'))
-            """, (from_id, to_id, content))
+            """,
+                (from_id, to_id, content),
+            )
 
             conn.commit()
             conn.close()
@@ -193,9 +212,10 @@ class IPCManager:
 
             # 인스턴스 통계 업데이트
             if from_id in self.instances:
-                self.instances[from_id]['message_count'] = \
-                    self.instances[from_id].get('message_count', 0) + 1
-                self.instances[from_id]['last_active'] = datetime.now().isoformat()
+                self.instances[from_id]["message_count"] = (
+                    self.instances[from_id].get("message_count", 0) + 1
+                )
+                self.instances[from_id]["last_active"] = datetime.now().isoformat()
                 self.save_instances()
 
             return True
@@ -225,12 +245,15 @@ class IPCManager:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
 
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT from_id, content, timestamp
                 FROM messages
                 WHERE to_id = ? AND is_read = 0
                 ORDER BY timestamp ASC
-            """, (instance_id,))
+            """,
+                (instance_id,),
+            )
 
             messages = cursor.fetchall()
 
@@ -248,11 +271,14 @@ class IPCManager:
                 print()
 
             # 읽음 표시 업데이트
-            cursor.execute("""
+            cursor.execute(
+                """
                 UPDATE messages
                 SET is_read = 1
                 WHERE to_id = ? AND is_read = 0
-            """, (instance_id,))
+            """,
+                (instance_id,),
+            )
 
             conn.commit()
             conn.close()
@@ -266,12 +292,14 @@ class IPCManager:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
 
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT from_id, to_id, content, timestamp, is_read
                 FROM messages
                 ORDER BY timestamp DESC
                 LIMIT 50
-            """)
+            """
+            )
 
             messages = cursor.fetchall()
             conn.close()
@@ -280,7 +308,7 @@ class IPCManager:
                 print("📭 메시지가 없습니다.")
                 return
 
-            print(f"\n📮 전체 메시지 (최근 50개)")
+            print("\n📮 전체 메시지 (최근 50개)")
             print("=" * 60)
 
             for from_id, to_id, content, timestamp, is_read in messages:
@@ -296,7 +324,7 @@ class IPCManager:
         """모든 메시지 삭제"""
         response = input("⚠️ 정말 모든 메시지를 삭제하시겠습니까? (yes/no): ")
 
-        if response.lower() != 'yes':
+        if response.lower() != "yes":
             print("❌ 취소되었습니다.")
             return
 
@@ -359,12 +387,14 @@ class IPCManager:
             cursor = conn.cursor()
 
             # 인스턴스별 발신 통계
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT from_id, COUNT(*) as count
                 FROM messages
                 GROUP BY from_id
                 ORDER BY count DESC
-            """)
+            """
+            )
 
             sent_stats = cursor.fetchall()
 
@@ -374,12 +404,14 @@ class IPCManager:
                     print(f"  {instance_id}: {count}개")
 
             # 인스턴스별 수신 통계
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT to_id, COUNT(*) as count
                 FROM messages
                 GROUP BY to_id
                 ORDER BY count DESC
-            """)
+            """
+            )
 
             received_stats = cursor.fetchall()
 
@@ -389,12 +421,14 @@ class IPCManager:
                     print(f"  {instance_id}: {count}개")
 
             # 시간대별 통계
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT strftime('%H', timestamp) as hour, COUNT(*) as count
                 FROM messages
                 GROUP BY hour
                 ORDER BY hour
-            """)
+            """
+            )
 
             hourly_stats = cursor.fetchall()
 
@@ -416,7 +450,8 @@ class IPCManager:
 
             if instance_id:
                 # 특정 인스턴스의 메시지만 정리
-                cursor.execute("""
+                cursor.execute(
+                    """
                     DELETE FROM messages
                     WHERE to_id = ? AND id NOT IN (
                         SELECT id FROM messages
@@ -424,14 +459,19 @@ class IPCManager:
                         ORDER BY timestamp DESC
                         LIMIT ?
                     )
-                """, (instance_id, instance_id, keep_count))
+                """,
+                    (instance_id, instance_id, keep_count),
+                )
 
                 deleted = cursor.rowcount
-                print(f"✅ '{instance_id}'의 오래된 메시지 {deleted}개 삭제 (최신 {keep_count}개 유지)")
+                print(
+                    f"✅ '{instance_id}'의 오래된 메시지 {deleted}개 삭제 (최신 {keep_count}개 유지)"
+                )
             else:
                 # 모든 인스턴스의 메시지 정리
                 for inst_id in self.instances.keys():
-                    cursor.execute("""
+                    cursor.execute(
+                        """
                         DELETE FROM messages
                         WHERE to_id = ? AND id NOT IN (
                             SELECT id FROM messages
@@ -439,7 +479,9 @@ class IPCManager:
                             ORDER BY timestamp DESC
                             LIMIT ?
                         )
-                    """, (inst_id, inst_id, keep_count))
+                    """,
+                        (inst_id, inst_id, keep_count),
+                    )
 
                     deleted = cursor.rowcount
                     if deleted > 0:
@@ -451,9 +493,11 @@ class IPCManager:
         except Exception as e:
             print(f"❌ 메시지 정리 실패: {e}")
 
+
 def print_usage():
     """사용법 출력"""
-    print("""
+    print(
+        """
 Claude IPC Manager - 사용법
 
 인스턴스 관리:
@@ -478,7 +522,9 @@ Claude IPC Manager - 사용법
   python ipc_manager.py register claude
   python ipc_manager.py send claude gemini "안녕하세요!"
   python ipc_manager.py check gemini
-""")
+"""
+    )
+
 
 def main():
     """메인 실행 함수"""
@@ -490,45 +536,45 @@ def main():
     command = sys.argv[1].lower()
 
     try:
-        if command == 'init':
+        if command == "init":
             manager.init_database()
 
-        elif command == 'register' and len(sys.argv) >= 3:
+        elif command == "register" and len(sys.argv) >= 3:
             manager.register_instance(sys.argv[2])
 
-        elif command == 'unregister' and len(sys.argv) >= 3:
+        elif command == "unregister" and len(sys.argv) >= 3:
             manager.unregister_instance(sys.argv[2])
 
-        elif command == 'list':
+        elif command == "list":
             manager.list_instances()
 
-        elif command == 'send' and len(sys.argv) >= 5:
+        elif command == "send" and len(sys.argv) >= 5:
             from_id = sys.argv[2]
             to_id = sys.argv[3]
-            content = ' '.join(sys.argv[4:])
+            content = " ".join(sys.argv[4:])
             manager.send_message(from_id, to_id, content)
 
-        elif command == 'broadcast' and len(sys.argv) >= 4:
+        elif command == "broadcast" and len(sys.argv) >= 4:
             from_id = sys.argv[2]
-            content = ' '.join(sys.argv[3:])
+            content = " ".join(sys.argv[3:])
             manager.broadcast_message(from_id, content)
 
-        elif command == 'check' and len(sys.argv) >= 3:
+        elif command == "check" and len(sys.argv) >= 3:
             manager.check_messages(sys.argv[2])
 
-        elif command == 'show-all':
+        elif command == "show-all":
             manager.show_all_messages()
 
-        elif command == 'clear':
+        elif command == "clear":
             manager.clear_messages()
 
-        elif command == 'status':
+        elif command == "status":
             manager.show_status()
 
-        elif command == 'stats':
+        elif command == "stats":
             manager.show_stats()
 
-        elif command == 'cleanup':
+        elif command == "cleanup":
             if len(sys.argv) >= 4:
                 # cleanup <instance_id> <keep_count>
                 manager.cleanup_messages(sys.argv[2], int(sys.argv[3]))
@@ -546,6 +592,7 @@ def main():
     except Exception as e:
         print(f"❌ 오류 발생: {e}")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

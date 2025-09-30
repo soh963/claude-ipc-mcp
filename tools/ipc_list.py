@@ -21,7 +21,9 @@ def list_instances(instance_id: str | None = None) -> None:
         sock.settimeout(5.0)
         sock.connect((BROKER_HOST, BROKER_PORT))
     except OSError as exc:
-        raise SystemExit(f"Error: Could not connect to broker at {BROKER_HOST}:{BROKER_PORT} ({exc}).")
+        raise SystemExit(
+            f"Error: Could not connect to broker at {BROKER_HOST}:{BROKER_PORT} ({exc})."
+        )
 
     try:
         request = {

@@ -1,0 +1,17 @@
+# Lychee link checker configuration
+
+# Exclude patterns (private or dynamic URLs)
+exclude = [
+  "https://img.shields.io/",
+  "https://github.com/soh963/claude-ipc-mcp/actions/workflows/ci.yml",
+]
+
+# Accept file extensions
+accept = [".md", ".html"]
+
+# Retry settings
+max-retries = 2
+retry-wait-time = 2
+
+# Offline mode (check local links only) can be enabled if network is flaky
+# offline = true

@@ -13,6 +13,7 @@ from pathlib import Path
 # psutil이 설치되지 않은 경우를 대비한 대체 로직
 try:
     import psutil
+
     HAS_PSUTIL = True
 except ImportError:
     HAS_PSUTIL = False
@@ -23,7 +24,7 @@ class BrokerManager:
     def __init__(self):
         self.lock_file = Path.home() / ".claude-ipc-data" / "broker.lock"
         self.broker_script = Path(__file__).parent.parent / "src" / "claude_ipc_server.py"
-        self.broker_host = 'localhost'
+        self.broker_host = "localhost"
         self.broker_port = 9876
         # 데이터 디렉토리 생성
         self.lock_file.parent.mkdir(parents=True, exist_ok=True)
@@ -32,32 +33,34 @@ class BrokerManager:
         """포트가 실제로 LISTENING 상태인지 확인"""
         if HAS_PSUTIL:
             for conn in psutil.net_connections():
-                if conn.laddr.port == self.broker_port and conn.status == 'LISTEN':
+                if conn.laddr.port == self.broker_port and conn.status == "LISTEN":
                     return True
             return False
         else:
             # 대체 방법: netstat 명령 사용
             import platform
-            if platform.system() == 'Windows':
-                cmd = f'netstat -an | findstr :{self.broker_port}'
+
+            if platform.system() == "Windows":
+                cmd = f"netstat -an | findstr :{self.broker_port}"
             else:
-                cmd = f'netstat -an | grep :{self.broker_port}'
+                cmd = f"netstat -an | grep :{self.broker_port}"
 
             result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-            return 'LISTENING' in result.stdout or 'LISTEN' in result.stdout
+            return "LISTENING" in result.stdout or "LISTEN" in result.stdout
 
     def is_process_running(self, pid: int) -> bool:
         """프로세스가 실행 중인지 확인"""
         if HAS_PSUTIL:
             try:
                 process = psutil.Process(pid)
-                return process.is_running() and 'python' in process.name().lower()
+                return process.is_running() and "python" in process.name().lower()
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 return False
         else:
             # 대체 방법: OS 명령 사용
             import platform
-            if platform.system() == 'Windows':
+
+            if platform.system() == "Windows":
                 cmd = f'tasklist /FI "PID eq {pid}" 2>nul'
                 result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
                 return str(pid) in result.stdout
@@ -83,11 +86,11 @@ class BrokerManager:
     def cleanup_stale_processes(self):
         """TIME_WAIT 상태의 연결과 좀비 프로세스 정리"""
         if HAS_PSUTIL:
-            for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+            for proc in psutil.process_iter(["pid", "name", "cmdline"]):
                 try:
-                    if 'python' in proc.info['name'].lower():
-                        cmdline = proc.info.get('cmdline', [])
-                        if any('claude_ipc_server.py' in str(arg) for arg in cmdline):
+                    if "python" in proc.info["name"].lower():
+                        cmdline = proc.info.get("cmdline", [])
+                        if any("claude_ipc_server.py" in str(arg) for arg in cmdline):
                             if proc.pid != self.get_locked_pid():
                                 proc.terminate()
                                 print(f"  ⚠️ Terminated orphan broker process: {proc.pid}")
@@ -103,7 +106,7 @@ class BrokerManager:
         if self.lock_file.exists():
             try:
                 return int(self.lock_file.read_text().strip())
-            except:
+            except (ValueError, OSError):
                 return 0
         return 0
 
@@ -122,7 +125,7 @@ class BrokerManager:
         print(f"  Script: {broker_path}")
 
         # 브로커 시작
-        if sys.platform == 'win32':
+        if sys.platform == "win32":
             # Windows: CREATE_NEW_CONSOLE로 독립 프로세스 생성
             try:
                 # Windows에서 백그라운드로 실행
@@ -131,7 +134,7 @@ class BrokerManager:
                 proc = subprocess.Popen(
                     [python_exe, broker_path],
                     startupinfo=startupinfo,
-                    creationflags=subprocess.CREATE_NEW_PROCESS_GROUP
+                    creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
                 )
             except Exception as e:
                 print(f"  ❌ Failed to start broker: {e}")
@@ -140,10 +143,10 @@ class BrokerManager:
             # Unix: nohup으로 데몬화
             try:
                 proc = subprocess.Popen(
-                    ['nohup', python_exe, broker_path],
+                    ["nohup", python_exe, broker_path],
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL,
-                    preexec_fn=os.setsid
+                    preexec_fn=os.setsid,
                 )
             except Exception as e:
                 print(f"  ❌ Failed to start broker: {e}")
@@ -174,7 +177,7 @@ class BrokerManager:
 
             # 테스트 등록 요청
             test_id = f"broker_test_{int(time.time())}"
-            request = json.dumps({'action': 'register', 'instance_id': test_id})
+            request = json.dumps({"action": "register", "instance_id": test_id})
             sock.send(request.encode())
 
             # 응답 대기
@@ -184,7 +187,7 @@ class BrokerManager:
             if response:
                 result = json.loads(response)
                 # session_token이 있으면 성공
-                if 'session_token' in result:
+                if "session_token" in result:
                     print(f"  ✅ Broker test successful (registered as {test_id})")
                     return True
 
@@ -213,12 +216,14 @@ class BrokerManager:
             if self.is_process_running(locked_pid):
                 # 프로세스는 있지만 응답하지 않음 - 재시작 필요
                 print(f"  ⚠️ Broker process {locked_pid} exists but not responding. Restarting...")
-                if sys.platform == 'win32':
-                    subprocess.run(f'taskkill /F /PID {locked_pid}', shell=True, capture_output=True)
+                if sys.platform == "win32":
+                    subprocess.run(
+                        f"taskkill /F /PID {locked_pid}", shell=True, capture_output=True
+                    )
                 else:
                     try:
                         os.kill(locked_pid, 9)
-                    except:
+                    except OSError:
                         pass
                 time.sleep(2)
             else:

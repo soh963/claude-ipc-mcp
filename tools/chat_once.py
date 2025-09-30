@@ -103,7 +103,7 @@ def launch_responder(instance_id: str, monitor: bool) -> Optional[subprocess.Pop
 
 def _stream_output(stream, label: str) -> None:
     for line in stream:
-        print(f"[{label}] {line.rstrip()}" )
+        print(f"[{label}] {line.rstrip()}")
 
 
 def stop_process(proc: Optional[subprocess.Popen]) -> None:
@@ -116,7 +116,9 @@ def stop_process(proc: Optional[subprocess.Popen]) -> None:
         proc.kill()
 
 
-def wait_for_reply(sender: str, token: str, expected_from: str, baseline: datetime, timeout: int) -> Optional[dict[str, object]]:
+def wait_for_reply(
+    sender: str, token: str, expected_from: str, baseline: datetime, timeout: int
+) -> Optional[dict[str, object]]:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         messages = check_messages(sender, token)
@@ -173,7 +175,9 @@ def main(argv: Iterable[str]) -> None:
         responder_proc = launch_responder(args.receiver, args.monitor)
         time.sleep(1.0)
         if responder_proc and responder_proc.poll() is not None:
-            print(f"⚠️ Auto-responder for {args.receiver} exited immediately. Continuing without it.")
+            print(
+                f"⚠️ Auto-responder for {args.receiver} exited immediately. Continuing without it."
+            )
             responder_proc = None
 
     baseline = datetime.now()

@@ -8,7 +8,7 @@ import os
 import sys
 import yaml
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Dict, Any
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -22,7 +22,7 @@ def get_config_path() -> Path:
     Returns:
         Path: Path to .ipc_project.yml in current directory
     """
-    return Path(os.getcwd()) / '.ipc_project.yml'
+    return Path(os.getcwd()) / ".ipc_project.yml"
 
 
 def load_project_config() -> Dict[str, Any]:
@@ -40,7 +40,7 @@ def load_project_config() -> Dict[str, Any]:
         return create_default_config()
 
     try:
-        with open(config_path, 'r', encoding='utf-8') as f:
+        with open(config_path, "r", encoding="utf-8") as f:
             config = yaml.safe_load(f)
             if config is None:
                 config = {}
@@ -59,38 +59,32 @@ def create_default_config() -> Dict[str, Any]:
         dict: Default configuration dictionary
     """
     config = {
-        'project': {
-            'name': get_project_name(),
-            'id': get_project_id(),
-            'port': get_project_port(),
-            'isolation_mode': 'strict',  # strict, relaxed, or disabled
+        "project": {
+            "name": get_project_name(),
+            "id": get_project_id(),
+            "port": get_project_port(),
+            "isolation_mode": "strict",  # strict, relaxed, or disabled
         },
-        'allowed_instances': [
-            'claude',
-            'gemini',
-            'codex',
-            'lm',
-            'chatgpt'
-        ],
-        'settings': {
-            'max_message_size': 20480,  # 20KB
-            'auto_responder': False,
-            'rate_limit': 100,  # messages per minute
-            'message_retention_days': 7,
-            'enable_forwarding': True,
-            'enable_file_messages': True,
+        "allowed_instances": ["claude", "gemini", "codex", "lm", "chatgpt"],
+        "settings": {
+            "max_message_size": 20480,  # 20KB
+            "auto_responder": False,
+            "rate_limit": 100,  # messages per minute
+            "message_retention_days": 7,
+            "enable_forwarding": True,
+            "enable_file_messages": True,
         },
-        'permissions': {
-            'allow_cross_project': False,  # Allow messages from other projects
-            'trusted_projects': [],  # List of trusted project IDs
-            'allow_broadcast': True,  # Allow broadcast messages within project
+        "permissions": {
+            "allow_cross_project": False,  # Allow messages from other projects
+            "trusted_projects": [],  # List of trusted project IDs
+            "allow_broadcast": True,  # Allow broadcast messages within project
         },
-        'network': {
-            'host': '127.0.0.1',
-            'timeout': 30,  # seconds
-            'max_connections': 50,
-            'buffer_size': 8192,
-        }
+        "network": {
+            "host": "127.0.0.1",
+            "timeout": 30,  # seconds
+            "max_connections": 50,
+            "buffer_size": 8192,
+        },
     }
 
     # Save configuration
@@ -111,7 +105,7 @@ def save_project_config(config: Dict[str, Any]) -> bool:
     config_path = get_config_path()
 
     try:
-        with open(config_path, 'w', encoding='utf-8') as f:
+        with open(config_path, "w", encoding="utf-8") as f:
             yaml.dump(config, f, default_flow_style=False, sort_keys=False)
         print(f"✅ Configuration saved to {config_path}")
         return True
@@ -134,7 +128,7 @@ def update_config_value(key_path: str, value: Any) -> bool:
     config = load_project_config()
 
     # Navigate to the key using dot notation
-    keys = key_path.split('.')
+    keys = key_path.split(".")
     current = config
 
     # Navigate to parent of target key
@@ -164,7 +158,7 @@ def get_config_value(key_path: str, default: Any = None) -> Any:
     config = load_project_config()
 
     # Navigate to the key using dot notation
-    keys = key_path.split('.')
+    keys = key_path.split(".")
     current = config
 
     for key in keys:
@@ -187,10 +181,10 @@ def is_instance_allowed(instance_name: str) -> bool:
         bool: True if instance is allowed
     """
     config = load_project_config()
-    allowed = config.get('allowed_instances', [])
+    allowed = config.get("allowed_instances", [])
 
     # Check base name (without project suffix)
-    base_name = instance_name.split('@')[0] if '@' in instance_name else instance_name
+    base_name = instance_name.split("@")[0] if "@" in instance_name else instance_name
     return base_name in allowed
 
 
@@ -201,7 +195,7 @@ def is_cross_project_allowed() -> bool:
     Returns:
         bool: True if cross-project communication is allowed
     """
-    return get_config_value('permissions.allow_cross_project', False)
+    return get_config_value("permissions.allow_cross_project", False)
 
 
 def is_project_trusted(project_id: str) -> bool:
@@ -214,7 +208,7 @@ def is_project_trusted(project_id: str) -> bool:
     Returns:
         bool: True if project is trusted
     """
-    trusted = get_config_value('permissions.trusted_projects', [])
+    trusted = get_config_value("permissions.trusted_projects", [])
     return project_id in trusted
 
 
@@ -229,11 +223,11 @@ def add_trusted_project(project_id: str) -> bool:
         bool: True if added successfully
     """
     config = load_project_config()
-    trusted = config.get('permissions', {}).get('trusted_projects', [])
+    trusted = config.get("permissions", {}).get("trusted_projects", [])
 
     if project_id not in trusted:
         trusted.append(project_id)
-        config.setdefault('permissions', {})['trusted_projects'] = trusted
+        config.setdefault("permissions", {})["trusted_projects"] = trusted
         return save_project_config(config)
     return True
 
@@ -243,9 +237,9 @@ def display_config_summary() -> None:
     Display current configuration summary.
     """
     config = load_project_config()
-    project = config.get('project', {})
-    settings = config.get('settings', {})
-    permissions = config.get('permissions', {})
+    project = config.get("project", {})
+    settings = config.get("settings", {})
+    permissions = config.get("permissions", {})
 
     print("📋 Project Configuration")
     print("━" * 40)
@@ -267,35 +261,35 @@ def display_config_summary() -> None:
 
 
 # CLI interface for testing
-if __name__ == '__main__':
+if __name__ == "__main__":
     import sys
 
     if len(sys.argv) > 1:
         command = sys.argv[1]
 
-        if command == 'show':
+        if command == "show":
             display_config_summary()
-        elif command == 'create':
+        elif command == "create":
             config = create_default_config()
             print("✅ Default configuration created")
-        elif command == 'get' and len(sys.argv) > 2:
+        elif command == "get" and len(sys.argv) > 2:
             key = sys.argv[2]
             value = get_config_value(key)
             print(f"{key}: {value}")
-        elif command == 'set' and len(sys.argv) > 3:
+        elif command == "set" and len(sys.argv) > 3:
             key = sys.argv[2]
             value = sys.argv[3]
             # Try to parse value as appropriate type
             try:
-                if value.lower() in ['true', 'false']:
-                    value = value.lower() == 'true'
+                if value.lower() in ["true", "false"]:
+                    value = value.lower() == "true"
                 elif value.isdigit():
                     value = int(value)
-            except:
+            except Exception:
                 pass
             if update_config_value(key, value):
                 print(f"✅ Updated {key} = {value}")
-        elif command == 'trust' and len(sys.argv) > 2:
+        elif command == "trust" and len(sys.argv) > 2:
             project_id = sys.argv[2]
             if add_trusted_project(project_id):
                 print(f"✅ Added {project_id} to trusted projects")
