@@ -40,6 +40,43 @@ uv run python tools/ipc_global_command.py responder stop gemini
 - 상태 파일(모니터링): `%USERPROFILE%\.claude-ipc-data\responders\<instance>.json`
   - 필드: started_at, last_check_at, last_response_at, policy
 
+## 3.5) 브로커 실행(필수 아닐 때가 많음)
+- 보통은 `status`/`ping`으로 응답이 오면 브로커가 이미 동작 중이라 별도 실행이 필요 없습니다. 미응답일 때 아래 중 한 가지로 실행하세요.
+
+1) 상태 확인(우선)
+```powershell
+uv run python tools/ipc_global_command.py status
+uv run python tools/ipc_global_command.py ping
+```
+
+2) 스크립트로 직접 실행
+```powershell
+uv run python tools/start_broker.py
+```
+
+3) 서버 엔트리로 실행
+```powershell
+uv run python src/claude_ipc_server.py
+```
+
+4) 배치/일괄 스크립트(Windows)
+```powershell
+./start_ipc_system.bat
+# 또는 도구/응답기까지 포함
+uv run python .\start_all_ai_ipc.py
+```
+
+실행 후 검증:
+```powershell
+uv run python tools/ipc_global_command.py status
+uv run python tools/ipc_global_command.py ping
+```
+
+문제 해결 팁:
+- 포트 충돌 시: `init --port <다른포트>`로 재초기화 후 재시도
+- 로그 확인: `logs/` 폴더
+- 자동 점검: `uv run python tools/ipc_global_command.py doctor`
+
 ## 4) 유지보수/청소
 ```powershell
 # 메시지 정리(멱등)
