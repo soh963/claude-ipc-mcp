@@ -1,0 +1,14 @@
+# IPC Command for Gemini CLI
+
+description = "📢 Broadcast message to all instances"
+prompt = """
+Broadcast a message to all registered instances.
+
+Message: {message}
+
+!{uv run python %IPC_CHAT%\\tools\\ipc_global_command.py broadcast "{message}"}
+
+This sends your message to:
+- All currently registered instances
+- Excluding yourself
+"""

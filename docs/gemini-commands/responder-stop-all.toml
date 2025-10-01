@@ -1,0 +1,10 @@
+# IPC Command for Gemini CLI
+
+description = "🛑 Stop all auto-responders"
+prompt = """
+Stop all running auto-responder processes:
+
+!{uv run python %IPC_CHAT%\\tools\\ipc_global_command.py responder stop-all}
+
+This terminates all active responder processes gracefully.
+"""

@@ -1,6 +1,6 @@
 # IPC CLI Integration Summary
 
-Complete integration of IPC commands across Claude Code, Codex, and wrapper scripts.
+Complete integration of IPC commands across Claude Code, Gemini, Codex, and wrapper scripts.
 
 ## What Was Added
 
@@ -37,7 +37,42 @@ Complete integration of IPC commands across Claude Code, Codex, and wrapper scri
 
 **Total**: 25 Claude Code slash commands
 
-### 3. Codex CLI Integration
+### 3. Gemini CLI Integration (16 New Commands)
+- **Location**: `docs/gemini-commands/`
+- **Format**: TOML configuration files
+- **Installation Guide**: `docs/gemini-commands/INSTALL.md`
+
+**New TOML commands created**:
+1. `init.toml` - Initialize IPC project structure
+2. `ping.toml` - Test broker connectivity
+3. `register.toml` - Register instance with IPC
+4. `ask.toml` - Send message and wait for response
+5. `broadcast.toml` - Broadcast to all instances
+6. `broker-start.toml` - Start global broker
+7. `broker-stop.toml` - Stop global broker
+8. `broker-status.toml` - Check broker status
+9. `instances-delete.toml` - Delete specific instance
+10. `instances-reset.toml` - Reset all instances
+11. `messages-clear.toml` - Clear all messages
+12. `session.toml` - Show session info
+13. `session-clear.toml` - Clear session data
+14. `responder-start-all.toml` - Start all responders
+15. `responder-stop-all.toml` - Stop all responders
+16. `INSTALL.md` - Installation and usage guide
+
+**Existing commands** (from previous work):
+- check, doctor, list, responder-start, responder-status, responder-stop, send, setup, status
+
+**Total**: 25 Gemini CLI slash commands (9 existing + 16 new)
+
+**Key Features**:
+- Uses `%IPC_CHAT%` environment variable for project path
+- TOML format with `description` and `prompt` fields
+- Command execution via `!{uv run python ...}` syntax
+- User-friendly descriptions with emoji indicators
+- Consistent with Gemini CLI conventions
+
+### 4. Codex CLI Integration
 - **File**: `docs/codex-config.toml`
 - **Content**: Complete TOML configuration with all 25 IPC commands
 - **Features**:
@@ -45,7 +80,7 @@ Complete integration of IPC commands across Claude Code, Codex, and wrapper scri
   - Smart defaults (e.g., --policy smart --detach for responders)
   - Absolute paths to ensure commands work from any directory
 
-### 4. Enhanced ipc.bat Wrapper
+### 5. Enhanced ipc.bat Wrapper
 - **File**: `scripts/ipc.bat`
 - **New Aliases**: 13 convenient aliases added
 
@@ -77,6 +112,29 @@ Copy-Item "D:\claude-ipc-mcp\docs\claude-commands\*.md" "$env:USERPROFILE\.claud
 
 After copying, restart Claude Code and verify with `/ipc` to see all commands.
 
+### For Gemini CLI Users
+
+```powershell
+# Windows
+New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.gemini\commands\ipc"
+Copy-Item "D:\claude-ipc-mcp\docs\gemini-commands\*.toml" "$env:USERPROFILE\.gemini\commands\ipc\"
+
+# Set environment variable for project path
+[System.Environment]::SetEnvironmentVariable('IPC_CHAT', 'D:\claude-ipc-mcp', 'User')
+```
+
+```bash
+# Linux/macOS
+mkdir -p ~/.gemini/commands/ipc
+cp D:/claude-ipc-mcp/docs/gemini-commands/*.toml ~/.gemini/commands/ipc/
+
+# Set environment variable
+echo 'export IPC_CHAT="D:/claude-ipc-mcp"' >> ~/.bashrc
+source ~/.bashrc
+```
+
+After copying, restart Gemini CLI and verify with `/ipc` to see all commands.
+
 ### For Codex Users
 
 1. Open your Codex `config.toml` file
@@ -101,17 +159,17 @@ D:\claude-ipc-mcp\scripts\ipc.bat list
 
 ## Command Coverage Matrix
 
-| Command Category | Claude Code | Codex | ipc.bat | Total Commands |
-|-----------------|-------------|-------|---------|----------------|
-| Core | ✅ | ✅ | ✅ | 5 |
-| Communication | ✅ | ✅ | ✅ | 4 |
-| Broker Management | ✅ | ✅ | ✅ | 3 |
-| Instance Management | ✅ | ✅ | ✅ | 3 |
-| Message Management | ✅ | ✅ | ✅ | 1 |
-| Session Management | ✅ | ✅ | ✅ | 2 |
-| Auto-Responder | ✅ | ✅ | ✅ | 5 |
-| Advanced | ✅ | ✅ | ✅ | 2 |
-| **Total** | **25** | **25** | **14 aliases** | **25 unique** |
+| Command Category | Claude Code | Gemini | Codex | ipc.bat | Total Commands |
+|-----------------|-------------|--------|-------|---------|----------------|
+| Core | ✅ | ✅ | ✅ | ✅ | 5 |
+| Communication | ✅ | ✅ | ✅ | ✅ | 4 |
+| Broker Management | ✅ | ✅ | ✅ | ✅ | 3 |
+| Instance Management | ✅ | ✅ | ✅ | ✅ | 3 |
+| Message Management | ✅ | ✅ | ✅ | ✅ | 1 |
+| Session Management | ✅ | ✅ | ✅ | ✅ | 2 |
+| Auto-Responder | ✅ | ✅ | ✅ | ✅ | 5 |
+| Advanced | ✅ | ✅ | ✅ | ✅ | 2 |
+| **Total** | **25** | **25** | **25** | **14 aliases** | **25 unique** |
 
 ## Quick Reference
 
@@ -160,6 +218,7 @@ IPC_RESPONDER_POLICY=smart      # Default responder policy
 ## Testing Checklist
 
 - [ ] Claude Code slash commands work (test with `/ipc-status`)
+- [ ] Gemini CLI slash commands work (test with `/ipc-status`)
 - [ ] Codex slash commands work (test with `/ipc-status`)
 - [ ] ipc.bat aliases work (test with `ipc list`)
 - [ ] Broker operations work (start, stop, status)
@@ -167,12 +226,16 @@ IPC_RESPONDER_POLICY=smart      # Default responder policy
 - [ ] Responder operations work (start, stop, status)
 - [ ] Session operations work (show, clear)
 - [ ] Instance operations work (list, delete, reset)
+- [ ] Environment variable `IPC_CHAT` is set correctly for Gemini
 
 ## Related Documentation
 
 - **Main Reference**: `docs/IPC_COMPLETE_COMMAND_REFERENCE.md`
 - **CLI Commands**: `docs/ipc_cli_commands.md`
 - **Installation**: `docs/INSTALL.md`
+- **Claude Code Integration**: `docs/claude-commands/INSTALL.md`
+- **Gemini CLI Integration**: `docs/gemini-commands/INSTALL.md`
+- **Codex Integration**: `docs/codex-config.toml`
 - **Global Usage**: `docs/GLOBAL_USAGE_KO.md`
 - **Unified Guide**: `docs/IPC_UNIFIED_GUIDE_KO.md`
 - **Legacy Redirect**: `docs/IPC_MANAGER_LEGACY_REDIRECT.md`

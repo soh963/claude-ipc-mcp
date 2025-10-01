@@ -1,0 +1,10 @@
+# IPC Command for Gemini CLI
+
+description = "🔄 Reset all instances"
+prompt = """
+⚠️ WARNING: This will delete ALL instance registrations!
+
+!{uv run python %IPC_CHAT%\\tools\\ipc_global_command.py instances reset}
+
+This removes all instances from the broker. Messages are preserved.
+"""

@@ -1,0 +1,10 @@
+# IPC Command for Gemini CLI
+
+description = "📊 Check broker status"
+prompt = """
+Check global IPC broker status:
+
+!{uv run python %IPC_CHAT%\\tools\\ipc_global_command.py broker status}
+
+Shows broker running status, connection details, and active instances.
+"""

@@ -1,0 +1,14 @@
+# IPC Command for Gemini CLI
+
+description = "🚀 Start global IPC broker"
+prompt = """
+Start the global IPC message broker:
+
+!{uv run python %IPC_CHAT%\\tools\\ipc_global_command.py broker start}
+
+This:
+- Starts TCP server on port 9876
+- Initializes SQLite database
+- Enables session-based authentication
+- Activates rate limiting
+"""

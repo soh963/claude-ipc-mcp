@@ -1,0 +1,13 @@
+# IPC Command for Gemini CLI
+
+description = "🚀 Initialize IPC project structure"
+prompt = """
+Initialize the IPC system for this project:
+
+!{uv run python %IPC_CHAT%\\tools\\ipc_global_command.py init}
+
+This creates:
+- .ipc/ directory structure
+- config, logs, state, secret subdirectories
+- Project-specific IPC configuration
+"""

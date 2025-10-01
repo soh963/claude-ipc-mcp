@@ -1,0 +1,14 @@
+# IPC Command for Gemini CLI
+
+description = "📋 Show current session info"
+prompt = """
+Display current IPC session information:
+
+!{uv run python %IPC_CHAT%\\tools\\ipc_global_command.py session}
+
+Shows:
+- Instance ID
+- Session token status
+- Creation and activity times
+- Project directory
+"""

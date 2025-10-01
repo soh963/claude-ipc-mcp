@@ -1,0 +1,10 @@
+# IPC Command for Gemini CLI
+
+description = "🛑 Stop global IPC broker"
+prompt = """
+Stop the global IPC message broker:
+
+!{uv run python %IPC_CHAT%\\tools\\ipc_global_command.py broker stop}
+
+This gracefully shuts down the broker while preserving messages.
+"""

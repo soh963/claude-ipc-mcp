@@ -1,0 +1,10 @@
+# IPC Command for Gemini CLI
+
+description = "🧹 Clear current session"
+prompt = """
+Clear the current IPC session data:
+
+!{uv run python %IPC_CHAT%\\tools\\ipc_global_command.py session clear}
+
+This removes session token and requires re-registration.
+"""

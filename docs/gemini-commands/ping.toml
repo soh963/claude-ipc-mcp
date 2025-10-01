@@ -1,0 +1,13 @@
+# IPC Command for Gemini CLI
+
+description = "🔔 Test broker connectivity"
+prompt = """
+Test connection to the IPC broker:
+
+!{uv run python %IPC_CHAT%\\tools\\ipc_global_command.py ping}
+
+This verifies:
+- Broker is running
+- Network connectivity
+- Authentication status
+"""

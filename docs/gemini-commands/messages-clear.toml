@@ -1,0 +1,10 @@
+# IPC Command for Gemini CLI
+
+description = "🗑️ Clear all messages"
+prompt = """
+⚠️ WARNING: This will delete ALL messages permanently!
+
+!{uv run python %IPC_CHAT%\\tools\\ipc_global_command.py messages clear --force}
+
+This removes all messages from the database. Cannot be undone.
+"""

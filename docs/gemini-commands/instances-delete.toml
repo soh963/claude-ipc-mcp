@@ -1,0 +1,12 @@
+# IPC Command for Gemini CLI
+
+description = "🗑️ Delete specific instance"
+prompt = """
+Delete a specific instance registration.
+
+Instance name to delete: {instance_name}
+
+!{uv run python %IPC_CHAT%\\tools\\ipc_global_command.py instances delete {instance_name}}
+
+This removes the instance from the broker's registry.
+"""
