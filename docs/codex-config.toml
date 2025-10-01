@@ -1,0 +1,138 @@
+# Codex IPC Commands Configuration
+# Copy this section to your Codex config.toml file
+
+# Core Commands
+[[slash_commands]]
+name = "ipc-init"
+description = "Initialize project .ipc/ structure"
+command = "uv run python D:\\claude-ipc-mcp\\tools\\ipc_global_command.py init"
+
+[[slash_commands]]
+name = "ipc-status"
+description = "Check IPC system status"
+command = "uv run python D:\\claude-ipc-mcp\\tools\\ipc_global_command.py status"
+
+[[slash_commands]]
+name = "ipc-ping"
+description = "Test broker connectivity"
+command = "uv run python D:\\claude-ipc-mcp\\tools\\ipc_global_command.py ping"
+
+[[slash_commands]]
+name = "ipc-doctor"
+description = "System diagnostics and troubleshooting"
+command = "uv run python D:\\claude-ipc-mcp\\tools\\ipc_global_command.py doctor"
+
+[[slash_commands]]
+name = "ipc-register"
+description = "Register this instance with IPC"
+command = "uv run python D:\\claude-ipc-mcp\\tools\\ipc_global_command.py register {instance_name}"
+prompt_user_for_args = ["instance_name"]
+
+# Communication Commands
+[[slash_commands]]
+name = "ipc-send"
+description = "Send message to another instance"
+command = "uv run python D:\\claude-ipc-mcp\\tools\\ipc_global_command.py chat --to {target} {message}"
+prompt_user_for_args = ["target", "message"]
+
+[[slash_commands]]
+name = "ipc-ask"
+description = "Send message and wait for response"
+command = "uv run python D:\\claude-ipc-mcp\\tools\\ipc_global_command.py ask --to {target} {message} --timeout 30"
+prompt_user_for_args = ["target", "message"]
+
+[[slash_commands]]
+name = "ipc-check"
+description = "Check for new messages"
+command = "uv run python D:\\claude-ipc-mcp\\tools\\ipc_global_command.py messages check"
+
+[[slash_commands]]
+name = "ipc-broadcast"
+description = "Broadcast message to all instances"
+command = "uv run python D:\\claude-ipc-mcp\\tools\\ipc_global_command.py broadcast {message}"
+prompt_user_for_args = ["message"]
+
+# Broker Management
+[[slash_commands]]
+name = "ipc-broker-start"
+description = "Start global IPC broker"
+command = "uv run python D:\\claude-ipc-mcp\\tools\\ipc_global_command.py broker start"
+
+[[slash_commands]]
+name = "ipc-broker-stop"
+description = "Stop global IPC broker"
+command = "uv run python D:\\claude-ipc-mcp\\tools\\ipc_global_command.py broker stop"
+
+[[slash_commands]]
+name = "ipc-broker-status"
+description = "Check broker status"
+command = "uv run python D:\\claude-ipc-mcp\\tools\\ipc_global_command.py broker status"
+
+# Instance Management
+[[slash_commands]]
+name = "ipc-list"
+description = "List all registered instances"
+command = "uv run python D:\\claude-ipc-mcp\\tools\\ipc_global_command.py instances list --full"
+
+[[slash_commands]]
+name = "ipc-instances-delete"
+description = "Delete specific instance"
+command = "uv run python D:\\claude-ipc-mcp\\tools\\ipc_global_command.py instances delete {instance_name}"
+prompt_user_for_args = ["instance_name"]
+
+[[slash_commands]]
+name = "ipc-instances-reset"
+description = "Reset all instance registrations"
+command = "uv run python D:\\claude-ipc-mcp\\tools\\ipc_global_command.py instances reset"
+
+# Message Management
+[[slash_commands]]
+name = "ipc-messages-clear"
+description = "Clear all messages (requires --force)"
+command = "uv run python D:\\claude-ipc-mcp\\tools\\ipc_global_command.py messages clear --force"
+
+# Session Management
+[[slash_commands]]
+name = "ipc-session"
+description = "Show current session info"
+command = "uv run python D:\\claude-ipc-mcp\\tools\\ipc_global_command.py session"
+
+[[slash_commands]]
+name = "ipc-session-clear"
+description = "Clear current session data"
+command = "uv run python D:\\claude-ipc-mcp\\tools\\ipc_global_command.py session clear"
+
+# Auto-Responder Management
+[[slash_commands]]
+name = "ipc-responder-start"
+description = "Start auto-responder for instance"
+command = "uv run python D:\\claude-ipc-mcp\\tools\\ipc_global_command.py responder start {instance_name} --policy smart --detach"
+prompt_user_for_args = ["instance_name"]
+
+[[slash_commands]]
+name = "ipc-responder-start-all"
+description = "Start auto-responders for all instances"
+command = "uv run python D:\\claude-ipc-mcp\\tools\\ipc_global_command.py responder start-all --policy smart --detach"
+
+[[slash_commands]]
+name = "ipc-responder-stop"
+description = "Stop auto-responder for instance"
+command = "uv run python D:\\claude-ipc-mcp\\tools\\ipc_global_command.py responder stop {instance_name}"
+prompt_user_for_args = ["instance_name"]
+
+[[slash_commands]]
+name = "ipc-responder-stop-all"
+description = "Stop all auto-responders"
+command = "uv run python D:\\claude-ipc-mcp\\tools\\ipc_global_command.py responder stop-all"
+
+[[slash_commands]]
+name = "ipc-responder-status"
+description = "Check auto-responder status"
+command = "uv run python D:\\claude-ipc-mcp\\tools\\ipc_global_command.py responder status {instance_name}"
+prompt_user_for_args = ["instance_name"]
+
+# Setup Wizard
+[[slash_commands]]
+name = "ipc-setup"
+description = "Complete IPC setup wizard"
+command = "uv run python D:\\claude-ipc-mcp\\tools\\ipc_global_command.py init && uv run python D:\\claude-ipc-mcp\\tools\\ipc_global_command.py broker start && uv run python D:\\claude-ipc-mcp\\tools\\ipc_global_command.py status"
