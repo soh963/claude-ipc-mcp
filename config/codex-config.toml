@@ -1,0 +1,170 @@
+# Codex CLI - IPC Slash Commands Configuration
+# Copy this file to %USERPROFILE%\.codex\config.toml
+# or merge with your existing Codex configuration
+
+# ================================================================================
+# IPC Slash Commands - Global Configuration
+# ================================================================================
+
+[ipc]
+# IPC project path (update this to your actual path)
+project_path = "D:\\claude-ipc-mcp"
+chat_env = "IPC_CHAT"
+
+# ================================================================================
+# Slash Commands Definition
+# ================================================================================
+
+# 🚀 IPC Setup - One-click onboarding
+[slash_commands."ipc:setup"]
+command = "uv run python %IPC_CHAT%\\tools\\ipc_onboard.py --name {args[0]} --policy smart"
+description = "🚀 Complete IPC setup (register + auto-responder)"
+category = "ipc"
+requires_args = 1
+arg_names = ["instance_name"]
+output_format = "json"
+
+# 📊 IPC Status - Check connection
+[slash_commands."ipc:status"]
+command = "uv run python %IPC_CHAT%\\tools\\ipc_global_command.py status"
+description = "📊 Check IPC connection status"
+category = "ipc"
+
+# 👥 IPC List - Show all instances
+[slash_commands."ipc:list"]
+command = "uv run python %IPC_CHAT%\\tools\\ipc_global_command.py instances list --full"
+description = "👥 List all active instances"
+category = "ipc"
+
+# 💬 IPC Send - Send message
+[slash_commands."ipc:send"]
+command = "uv run python %IPC_CHAT%\\tools\\chat_once.py {args[0]} {args[1]} \"{args[2]}\""
+description = "💬 Send message to another instance"
+category = "ipc"
+requires_args = 3
+arg_names = ["from_instance", "to_instance", "message"]
+output_format = "json"
+
+# 📬 IPC Check - Check messages
+[slash_commands."ipc:check"]
+command = "uv run python %IPC_CHAT%\\tools\\check_messages.py {args[0]}"
+description = "📬 Check for new messages"
+category = "ipc"
+requires_args = 1
+arg_names = ["instance_name"]
+
+# 🤖 IPC Responder Start
+[slash_commands."ipc:responder-start"]
+command = "uv run python %IPC_CHAT%\\tools\\ipc_global_command.py responder start {args[0]} --policy {args[1]|smart} --detach"
+description = "🤖 Start auto-responder"
+category = "ipc"
+requires_args = 1
+arg_names = ["instance_name", "policy"]
+output_format = "json"
+
+# 📊 IPC Responder Status
+[slash_commands."ipc:responder-status"]
+command = "uv run python %IPC_CHAT%\\tools\\ipc_global_command.py responder status {args[0]}"
+description = "📊 Check responder status"
+category = "ipc"
+requires_args = 1
+arg_names = ["instance_name"]
+
+# 🛑 IPC Responder Stop
+[slash_commands."ipc:responder-stop"]
+command = "uv run python %IPC_CHAT%\\tools\\ipc_global_command.py responder stop {args[0]}"
+description = "🛑 Stop auto-responder"
+category = "ipc"
+requires_args = 1
+arg_names = ["instance_name"]
+
+# 🏥 IPC Doctor - Diagnose and fix
+[slash_commands."ipc:doctor"]
+command = "uv run python %IPC_CHAT%\\tools\\ipc_doctor.py --auto-fix"
+description = "🏥 Diagnose and fix IPC issues"
+category = "ipc"
+
+# ================================================================================
+# Environment Variables
+# ================================================================================
+
+[environment]
+# These variables should be set globally or in Codex configuration
+IPC_CHAT = "D:\\claude-ipc-mcp"  # Update to your project path
+IPC_DB_PATH = "%USERPROFILE%\\.claude-ipc-data\\messages.db"
+IPC_HOST = "127.0.0.1"
+IPC_GLOBAL_PORT = "9876"
+
+# ================================================================================
+# Usage Examples
+# ================================================================================
+
+# Example 1: Initial Setup
+# /ipc:setup codex-main
+
+# Example 2: Check Status
+# /ipc:status
+
+# Example 3: List Instances
+# /ipc:list
+
+# Example 4: Send Message
+# /ipc:send codex-main claude-worker "Can you review this code?"
+
+# Example 5: Check Messages
+# /ipc:check codex-main
+
+# Example 6: Start Auto-Responder
+# /ipc:responder-start codex-main smart
+
+# Example 7: Check Responder Status
+# /ipc:responder-status codex-main
+
+# Example 8: Stop Responder
+# /ipc:responder-stop codex-main
+
+# Example 9: Diagnose Issues
+# /ipc:doctor
+
+# ================================================================================
+# Installation Instructions
+# ================================================================================
+
+# 1. Copy this file to: %USERPROFILE%\.codex\config.toml
+#    Or merge with your existing config.toml
+
+# 2. Update the IPC_CHAT path in [environment] section
+
+# 3. Restart Codex CLI
+
+# 4. Test with: /ipc:status
+
+# ================================================================================
+# Troubleshooting
+# ================================================================================
+
+# If commands don't work:
+# 1. Check IPC_CHAT environment variable is set correctly
+# 2. Verify broker is running: /ipc:status
+# 3. Run diagnostics: /ipc:doctor
+# 4. Check Codex logs for error messages
+
+# ================================================================================
+# Fixed Issues (2025-01-XX)
+# ================================================================================
+
+# The following issues were fixed in this version:
+#
+# 1. Removed unsupported --json flags from commands:
+#    - ipc status --json → ipc status
+#    - ipc responder status --json → ipc responder status
+#    - ipc responder stop --json → ipc responder stop
+#    - ipc doctor --json → ipc doctor
+#
+# 2. Fixed instances command:
+#    - instances --format json → instances list --full
+#
+# 3. Fixed check messages command:
+#    - messages check --instance {args[0]} → check_messages.py {args[0]}
+#
+# These changes align with the actual CLI interface of ipc_global_command.py
