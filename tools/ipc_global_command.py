@@ -1158,6 +1158,28 @@ Documentation: docs/IPC_UNIFIED_GUIDE_KO.md
 
     sp.set_defaults(func=_cmd_register)
 
+    # rename subcommand
+    sp = sub.add_parser("rename", help="Rename an instance (rate limited to once per hour)")
+    sp.add_argument("--from", dest="old_name", required=True, help="Current instance ID")
+    sp.add_argument("--to", dest="new_name", required=True, help="New instance ID")
+
+    def _cmd_rename(args: argparse.Namespace) -> int:
+        try:
+            import importlib
+            mod = importlib.import_module("cli.commands.rename_cmd")
+            run_rename = getattr(mod, "run_rename", None)
+            if callable(run_rename):
+                return run_rename(
+                    old_name=args.old_name,
+                    new_name=args.new_name
+                )
+            raise ImportError("run_rename not found")
+        except Exception as e:
+            print(f"error: failed to rename: {e}", file=sys.stderr)
+            return 12
+
+    sp.set_defaults(func=_cmd_rename)
+
     # session subcommand
     sp = sub.add_parser("session", help="Show or clear current session")
     mg = sp.add_mutually_exclusive_group(required=True)

@@ -1,0 +1,14 @@
+# IPC Command for Gemini CLI
+
+description = "🔄 Rename an instance (rate limited to once per hour)"
+prompt = """
+Rename an IPC instance. Provide old name and new name:
+
+Old name: {{args[0]}}
+New name: {{args[1]}}
+
+!{uv run python %IPC_CHAT%\\tools\\ipc_global_command.py rename --from {{args[0]}} --to {{args[1]}}}
+
+Note: Rate limited to once per hour per instance.
+Messages are automatically forwarded to the new name.
+"""

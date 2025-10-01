@@ -28,6 +28,12 @@ description = "Register this instance with IPC"
 command = "uv run python D:\\claude-ipc-mcp\\tools\\ipc_global_command.py register {instance_name}"
 prompt_user_for_args = ["instance_name"]
 
+[[slash_commands]]
+name = "ipc-rename"
+description = "Rename an instance (rate limited to once per hour)"
+command = "uv run python D:\\claude-ipc-mcp\\tools\\ipc_global_command.py rename --from {old_name} --to {new_name}"
+prompt_user_for_args = ["old_name", "new_name"]
+
 # Communication Commands
 [[slash_commands]]
 name = "ipc-send"
