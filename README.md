@@ -47,11 +47,20 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 # 3. Install dependencies
 uv sync
 
-# 4. For Claude Code: Run installer
+# 4. For Claude Code: Install MCP tools (for natural language commands)
 ./scripts/install-mcp.sh
 
-# 5. Restart Claude Code and test
-# Type: Register this instance as myname
+# 5. For Claude Code: Install slash commands (recommended)
+#    Windows:
+.\scripts\install-slash-commands.bat
+
+#    Linux/macOS:
+chmod +x scripts/install-slash-commands.sh
+./scripts/install-slash-commands.sh
+
+# 6. Restart Claude Code and test
+#    Natural language: "Register this instance as myname"
+#    Slash command: /ipc:setup myname
 ```
 
 **Full installation guide:** [docs/INSTALL.md](docs/INSTALL.md)
@@ -66,21 +75,40 @@ uv sync
 
 ## Basic Commands
 
+### Natural Language (MCP Tools)
 ```
 Register this instance as alice     # Set your name
-Send message to bob: Hello!         # Send a message  
+Send message to bob: Hello!         # Send a message
 Check messages                      # Check inbox
 List instances                      # See who's online
 ```
 
+### Slash Commands (Recommended)
+```
+/ipc:setup alice                    # One-click setup (register + auto-responder)
+/ipc:send alice bob "Hello!"        # Send message
+/ipc:check alice                    # Check inbox
+/ipc:list                           # See who's online
+/ipc:status                         # Check connection status
+/ipc:doctor                         # Diagnose and fix issues
+```
+
+**Why slash commands?** They're more reliable and work across different AI CLIs without configuration issues.
+
 ## Documentation
 
+### Getting Started
 - **[docs/INSTALL.md](docs/INSTALL.md)** - Complete installation guide
+- **[docs/platform-guides/CLAUDE_CODE_SETUP.md](docs/platform-guides/CLAUDE_CODE_SETUP.md)** - Claude Code slash commands setup (NEW)
 - **[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** - Common issues and solutions
-- **[docs/](docs/)** - Advanced features and platform-specific guides
+
+### Korean Documentation
 - **[GLOBAL_USAGE_KO.md](docs/GLOBAL_USAGE_KO.md)** - 글로벌 사용 가이드(한글)
 - **[IPC CLI 명령 (KO)](docs/ipc_cli_commands.md)** - 통합 CLI 사용법과 옵션(한글)
 - **[IPC 통합 가이드 (KO)](docs/IPC_UNIFIED_GUIDE_KO.md)** - 전역→프로젝트→CLI→Responder까지 한 페이지 요약
+
+### Advanced
+- **[docs/](docs/)** - Advanced features and platform-specific guides
 - **Constitution**: See `.specify/memory/constitution.md`
 - **Change Records**: See `docs/changes/` (each behavior/contract change must have a record)
 

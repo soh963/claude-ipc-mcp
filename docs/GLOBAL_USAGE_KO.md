@@ -9,6 +9,11 @@
 
 이 문서는 "전역 설치 한 번 → 모든 프로젝트에서 사용"을 목표로, Windows PowerShell 기준으로 아주 쉽게 정리한 사용법입니다. `ipc` 래퍼가 PATH에 없다면 `./ipc.bat` 또는 `uv run python tools/ipc_global_command.py`로 동일하게 실행하세요.
 
+참고: 브로커 관리 전역 명령어가 추가되었습니다.
+- `ipc broker status` / `ipc broker start` / `ipc broker stop`
+- 환경변수 `IPC_HOST`, `IPC_GLOBAL_PORT`(또는 `IPC_PORT`)로 호스트/포트를 제어할 수 있습니다.
+ - 상태 확인(`list` 액션)은 인증이 필요 없습니다. 최신 코드에서는 공개로 열려 있어 `ipc broker status`가 세션 없이 동작합니다.
+
 ## 0) 준비물
 - Windows + PowerShell
 - Python 3.12 이상, Git, UV(패키지 매니저)
@@ -99,6 +104,28 @@ $env:IPC_SHARED_SECRET = "같은-비밀키"
 ```
 - 로그 보기: `logs/` 폴더 확인
 - 계속 안 될 때: `ipc doctor` 결과를 이슈에 첨부
+
+### 브로커 느림/상태가 항상 false일 때
+다음 순서로 “캐시/재시작”을 수행하면 대부분 해결됩니다.
+
+```powershell
+# 1) 브로커 중지(여러 번 호출해도 안전)
+ipc broker stop
+
+# 2) 파이썬 캐시 폴더(__pycache__) 정리
+$root = "D:\claude-ipc-mcp\src"
+Get-ChildItem $root -Recurse -Directory -Filter "__pycache__" |
+  Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+
+# 3) 브로커 재시작 및 상태 확인
+ipc broker start
+ipc broker status
+
+# 4) 포트가 실제로 열렸는지 확인(기본 9876)
+Test-NetConnection 127.0.0.1 -Port 9876
+```
+
+참고: `ipc broker status`는 인증이 필요 없으므로, 서버 코드가 최신(공개 `list` 적용)으로 실행 중이라면 `{"running": true, "port": 9876}` 형태로 표시됩니다. 여전히 느리다면 PowerShell에서 실행하세요(Git Bash 환경은 소켓 타임아웃이 길어질 수 있음).
 
 ## 6) 자주 묻는 질문(FAQ)
 - Q. `ipc` 명령이 인식되지 않아요.

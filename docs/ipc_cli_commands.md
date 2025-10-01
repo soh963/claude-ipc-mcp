@@ -11,8 +11,9 @@
 ## IPC 사용 순서
 
 1. **(선택) 의존성 동기화**: `uv sync`
-2. **브로커 기동 확인**: `uv run python tools/start_broker.py`
-   - PowerShell 헬퍼를 사용한다면 `ipc-chat`이나 `ipc-ping` 호출 시 `start_broker.py`를 먼저 실행하도록 구성할 수 있습니다.
+2. **브로커 기동 확인**: `ipc broker status` → 필요 시 `ipc broker start`
+   - 직접 실행이 필요하면: `uv run python tools/start_broker.py` (레거시)
+   - PowerShell 헬퍼를 사용한다면 `ipc-chat`이나 `ipc-ping` 호출 시 브로커 상태를 점검하고 자동 시작하도록 구성할 수 있습니다.
 3. **인스턴스 등록** (최초 1회 또는 새 이름 필요 시)
    ```powershell
    uv run python tools/ipc_register.py codex --no-default
@@ -74,7 +75,8 @@
 
 | 명령어 | 위치 | 설명 | 예시 |
 | --- | --- | --- | --- |
-| `start_broker.py` | `tools/start_broker.py` | 브로커 실행 여부를 확인하고 필요 시 싱글톤으로 기동 | `uv run python tools/start_broker.py` |
+| `ipc broker` | `tools/ipc_global_command.py broker …` | 브로커 시작/중지/상태 관리(환경변수 지원) | `ipc broker start` / `ipc broker status` |
+| `start_broker.py` | `tools/start_broker.py` | (레거시) 브로커 싱글톤 기동 스크립트 | `uv run python tools/start_broker.py` |
 | `ipc_register.py` | `tools/ipc_register.py` | 신규 인스턴스 등록 또는 토큰 재발급 | `uv run python tools/ipc_register.py codex --no-default` |
 | `ipc_list.py` | `tools/ipc_list.py` | 현재 활성화된 인스턴스 목록 확인 | `python tools/ipc_list.py` |
 | `ipc_check.py` | `tools/ipc_check.py` | 브로커와 세션 기본 진단 | `uv run python tools/ipc_check.py` |
@@ -126,7 +128,20 @@
 - `scripts/install-global.ps1`이 등록한 경로 보정 래퍼 덕분에 이 문서의 모든 명령은 현재 작업 디렉터리에 관계없이 그대로 실행됩니다.
 - `IPC_CHAT` 환경 변수를 활용하면 다른 프로젝트 폴더에서도 `Invoke-Expression $env:IPC_CHAT --dry-run "codex가 gemini에게 '상태 보고' 요청"`처럼 자연어 기반 실행이 가능합니다.
 - PowerShell alias가 적용된 상태라면 `ipc-chat`, `ipc-ping`, `ipc-responder-*` 명령을 어느 위치에서든 사용할 수 있습니다.
-- 브로커가 응답하지 않을 때는 `tools/start_broker.py`를 다시 실행하거나 `tools/ipc_doctor.py`로 원인을 파악하세요.
+- 브로커가 응답하지 않을 때는 `ipc broker start`로 재기동하거나 `ipc doctor`로 원인을 파악하세요.
+
+### 브로커 전역 명령어
+
+- `ipc broker status` — 브로커 실행 여부와 포트 표시. 실행 중이 아니면 종료 코드 10 반환.
+- `ipc broker start` — 싱글톤 브로커 기동. 성공 0, 실패 3.
+- `ipc broker stop` — 브로커 중지(락 파일 기반). 성공 0. 이미 중지된 경우도 0.
+
+환경변수로 호스트/포트 제어 가능:
+
+- `IPC_HOST` (기본 127.0.0.1)
+- `IPC_GLOBAL_PORT` 또는 `IPC_PORT` (기본 9876)
+
+이 값들은 클라이언트와 런처 양쪽에서 동일하게 사용됩니다.
 - 자동 응답 정책은 환경변수 `IPC_RESPONDER_POLICY`(예: `smart`)로 전역 적용할 수 있으며, `responder start --policy`로 인스턴스별 지정도 가능합니다.
 - 상태 JSON(`%USERPROFILE%\\.claude-ipc-data\\responders\\<instance>.json`)은 외부 모니터링/자동화 파이프라인에서 쉽게 파싱할 수 있습니다.
 - `broker_test_*` 인스턴스는 브로커 자동 헬스체크에서 생성됩니다. 목록을 정리하고 싶다면 브로커를 재시작하거나 `reset_all_ipc.py`를 실행하세요.

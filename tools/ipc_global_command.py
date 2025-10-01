@@ -394,8 +394,95 @@ def cmd_doctor(args: argparse.Namespace) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="ipc", description="Global IPC CLI (minimal)")
-    sub = p.add_subparsers(dest="command", required=True)
+    description = """
+Claude IPC - Inter-Process Communication for AI Assistants
+
+Enable multiple AI instances (Claude, Gemini, ChatGPT, etc.) to communicate
+with each other through a central message broker.
+"""
+
+    epilog = """
+Quick Start:
+  ipc broker start              Start the message broker
+  ipc register codex            Register current instance as 'codex'
+  ipc ask --to gemini "hello"   Send message and wait for response
+  ipc responder start gemini    Start auto-responder for gemini
+
+Common Commands:
+  ipc init                      Initialize .ipc/ directory in project
+  ipc status                    Show broker and instance status
+  ipc instances list --full     Show all instances with responder status
+  ipc responder start-all       Start responders for all instances
+  ipc responder stop-all        Stop all running responders
+
+AI CLI Communication Scenarios:
+  # Register AI instances
+  ipc register codex            Register Codex CLI as 'codex'
+  ipc register gemini           Register Gemini AI as 'gemini'
+  ipc instances list --full     Check registered instances
+
+  # One-way messaging (fire and forget)
+  ipc chat --to gemini "Build completed"
+  ipc chat --to codex "Please review src/main.py"
+
+  # Two-way communication (ask and wait for response)
+  ipc ask --to gemini "What's your status?" --timeout 10
+  ipc ask --to codex "Tests passed?" --timeout 5
+
+  # Auto-responder setup for automated replies
+  ipc responder start gemini --policy smart --detach
+  ipc responder status gemini   Check auto-responder status
+  ipc responder stop gemini     Stop auto-responder
+
+  # Team collaboration workflow
+  ipc responder start-all --policy smart    # Start all responders
+  ipc ask --to gemini "Ready to deploy?"    # Ask and get auto-reply
+  ipc chat --to codex "Deployment done"     # Broadcast notification
+
+Instance Management:
+  # Delete all registered instances (system reset)
+  ipc instances reset               Delete all instances from broker
+
+  # Delete specific instance (selective removal)
+  ipc instances delete codex        Delete 'codex' instance
+  ipc instances delete test-temp    Delete temporary test instance
+
+  # Complete system cleanup workflow
+  ipc responder stop-all            1. Stop all auto-responders
+  ipc instances reset               2. Delete all instances
+  ipc messages clear --force        3. Delete all messages
+  ipc status                        4. Verify system status
+
+  # View all registered instances
+  ipc instances list                Simple list of instances
+  ipc instances list --full         Detailed view with responder status
+
+Message Management:
+  # Clear all messages (cannot be undone)
+  ipc messages clear --force        Delete all messages from broker
+
+  # System diagnostics
+  ipc doctor                        Check system health and configuration
+
+Environment Variables:
+  IPC_HOST                      Broker host (default: 127.0.0.1)
+  IPC_GLOBAL_PORT              Broker port (default: 9876)
+  IPC_SHARED_SECRET            Optional authentication secret
+  IPC_RESPONDER_POLICY         Default responder policy (simple/smart)
+
+For detailed help on any command:
+  ipc <command> --help
+
+Documentation: docs/IPC_UNIFIED_GUIDE_KO.md
+"""
+
+    p = argparse.ArgumentParser(
+        prog="ipc",
+        description=description,
+        epilog=epilog,
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    sub = p.add_subparsers(dest="command", required=True, title="Available Commands")
 
     sp = sub.add_parser("init", help="Initialize project .ipc folder")
     sp.add_argument("--minimal", action="store_true")
@@ -492,116 +579,297 @@ def build_parser() -> argparse.ArgumentParser:
     sub_msg = sp.add_subparsers(dest="subcmd", required=True)
     sp_clear = sub_msg.add_parser("clear", help="Clear project messages")
     sp_clear.add_argument("--force", action="store_true")
+    sp_clear.add_argument("--all", action="store_true", help="Clear ALL messages from broker (global)")
 
     def _cmd_messages(ns: argparse.Namespace) -> int:
         if ns.subcmd == "clear":
-            # Require .ipc exists
-            if not (Path.cwd() / ".ipc").exists():
-                print("error: project not initialized; run 'ipc init'", file=sys.stderr)
+            # Check --all flag for global deletion
+            clear_all = getattr(ns, "all", False)
+
+            # If not --all, require .ipc exists
+            if not clear_all and not (Path.cwd() / ".ipc").exists():
+                print("error: project not initialized; run 'ipc init' (or use --all for global clear)", file=sys.stderr)
                 return 12
             # For now, just a placeholder success when --force given
             if not ns.force:
                 print("refused: use --force to clear", file=sys.stderr)
                 return 40
-            # Determine current instance id (session preferred)
-            instance_id = None
-            try:
-                sess = read_session() if read_session else None
-                if sess and getattr(sess, "instance_id", None):
-                    instance_id = sess.instance_id
-                elif default_instance_id:
-                    instance_id = default_instance_id(Path.cwd())
-            except Exception:
-                pass
+
             # Connect to broker DB and delete rows
             import sqlite3 as _sqlite3
             from pathlib import Path as _Path
 
             db_path = _Path.home() / ".claude-ipc-data" / "messages.db"
-            deleted_in = 0
-            deleted_out = 0
-            try:
-                conn = _sqlite3.connect(db_path)
-                cur = conn.cursor()
-                if instance_id:
-                    cur.execute("DELETE FROM messages WHERE to_id = ?", (instance_id,))
-                    deleted_in = cur.rowcount if cur.rowcount is not None else 0
-                    cur.execute("DELETE FROM messages WHERE from_id = ?", (instance_id,))
-                    deleted_out = cur.rowcount if cur.rowcount is not None else 0
-                else:
-                    # No instance_id; conservative: clear nothing but succeed
+
+            if clear_all:
+                # Delete ALL messages from broker
+                deleted_total = 0
+                try:
+                    conn = _sqlite3.connect(db_path)
+                    cur = conn.cursor()
+                    cur.execute("DELETE FROM messages")
+                    deleted_total = cur.rowcount if cur.rowcount is not None else 0
+                    conn.commit()
+                    conn.close()
+                except Exception as e:
+                    # DB may not exist yet; treat as no-op success
+                    deleted_total = 0
+                print(f"✅ Cleared ALL messages from broker (deleted={deleted_total})")
+                return 0
+            else:
+                # Delete only current project's messages
+                # Determine current instance id (session preferred)
+                instance_id = None
+                try:
+                    sess = read_session() if read_session else None
+                    if sess and getattr(sess, "instance_id", None):
+                        instance_id = sess.instance_id
+                    elif default_instance_id:
+                        instance_id = default_instance_id(Path.cwd())
+                except Exception:
+                    pass
+
+                deleted_in = 0
+                deleted_out = 0
+                try:
+                    conn = _sqlite3.connect(db_path)
+                    cur = conn.cursor()
+                    if instance_id:
+                        cur.execute("DELETE FROM messages WHERE to_id = ?", (instance_id,))
+                        deleted_in = cur.rowcount if cur.rowcount is not None else 0
+                        cur.execute("DELETE FROM messages WHERE from_id = ?", (instance_id,))
+                        deleted_out = cur.rowcount if cur.rowcount is not None else 0
+                    else:
+                        # No instance_id; conservative: clear nothing but succeed
+                        deleted_in = deleted_out = 0
+                    conn.commit()
+                    conn.close()
+                except Exception:
+                    # DB may not exist yet; treat as no-op success
                     deleted_in = deleted_out = 0
-                conn.commit()
-                conn.close()
-            except Exception:
-                # DB may not exist yet; treat as no-op success
-                deleted_in = deleted_out = 0
-            print(f"messages cleared (deleted_inbox={deleted_in} deleted_outbox={deleted_out})")
-            return 0
+                print(f"messages cleared (deleted_inbox={deleted_in} deleted_outbox={deleted_out})")
+                return 0
         print("unknown messages subcommand", file=sys.stderr)
         return 12
 
     sp.set_defaults(func=_cmd_messages)
 
-    # instances reset/delete
+    # instances reset/delete/list
     sp = sub.add_parser("instances", help="Manage instance sessions")
     sub_inst = sp.add_subparsers(dest="subcmd", required=True)
-    sub_inst.add_parser("reset", help="Reset all instance sessions")
+    p_reset = sub_inst.add_parser("reset", help="Reset all instance sessions")
+    p_reset.add_argument("--all", action="store_true", help="Reset ALL instances from broker (global)")
     p_del = sub_inst.add_parser("delete", help="Delete one instance session")
     p_del.add_argument("instance_id")
+    p_list = sub_inst.add_parser("list", help="List all instances with status")
+    p_list.add_argument("--full", action="store_true", help="Show unified broker + responder status")
 
     def _cmd_instances(ns: argparse.Namespace) -> int:
-        if not (Path.cwd() / ".ipc").exists():
-            print("error: project not initialized; run 'ipc init'", file=sys.stderr)
+        # Check --all flag for global deletion
+        reset_all = getattr(ns, "all", False) if ns.subcmd == "reset" else False
+
+        # If not --all, require .ipc exists
+        if not reset_all and not (Path.cwd() / ".ipc").exists():
+            print("error: project not initialized; run 'ipc init' (or use --all for global reset)", file=sys.stderr)
             return 12
+
         if ns.subcmd == "reset":
-            # Remove all sessions for this project's instance
             import sqlite3 as _sqlite3
             from pathlib import Path as _Path
 
             db_path = _Path.home() / ".claude-ipc-data" / "messages.db"
-            removed = 0
-            try:
-                iid = None
-                sess = read_session() if read_session else None
-                if sess and getattr(sess, "instance_id", None):
-                    iid = sess.instance_id
-                elif default_instance_id:
-                    iid = default_instance_id(Path.cwd())
-                if iid:
+
+            if reset_all:
+                # Remove ALL instances from broker (both sessions and instances tables)
+                removed_sessions = 0
+                removed_instances = 0
+                try:
                     conn = _sqlite3.connect(db_path)
                     cur = conn.cursor()
-                    cur.execute("DELETE FROM sessions WHERE instance_id = ?", (iid,))
-                    removed = cur.rowcount if cur.rowcount is not None else 0
+
+                    # Delete from sessions table
+                    cur.execute("DELETE FROM sessions")
+                    removed_sessions = cur.rowcount if cur.rowcount is not None else 0
+
+                    # Delete from instances table (broker loads from this at startup)
+                    cur.execute("DELETE FROM instances")
+                    removed_instances = cur.rowcount if cur.rowcount is not None else 0
+
                     conn.commit()
                     conn.close()
-            except Exception:
-                removed = 0
-            print(f"instances reset (removed={removed})")
-            return 0
+                except Exception as e:
+                    print(f"⚠️ Error during reset: {e}", file=sys.stderr)
+                    removed_sessions = 0
+                    removed_instances = 0
+
+                print(f"✅ Reset ALL instances from broker")
+                print(f"   Sessions removed: {removed_sessions}")
+                print(f"   Instances removed: {removed_instances}")
+                print(f"   Total: {removed_sessions + removed_instances}")
+                return 0
+            else:
+                # Remove only this project's instance (from both tables)
+                removed_sessions = 0
+                removed_instances = 0
+                try:
+                    iid = None
+                    sess = read_session() if read_session else None
+                    if sess and getattr(sess, "instance_id", None):
+                        iid = sess.instance_id
+                    elif default_instance_id:
+                        iid = default_instance_id(Path.cwd())
+                    if iid:
+                        conn = _sqlite3.connect(db_path)
+                        cur = conn.cursor()
+
+                        # Delete from sessions table
+                        cur.execute("DELETE FROM sessions WHERE instance_id = ?", (iid,))
+                        removed_sessions = cur.rowcount if cur.rowcount is not None else 0
+
+                        # Delete from instances table
+                        cur.execute("DELETE FROM instances WHERE instance_id = ?", (iid,))
+                        removed_instances = cur.rowcount if cur.rowcount is not None else 0
+
+                        conn.commit()
+                        conn.close()
+                except Exception:
+                    removed_sessions = 0
+                    removed_instances = 0
+
+                print(f"instances reset (sessions={removed_sessions}, instances={removed_instances})")
+                return 0
         if ns.subcmd == "delete":
             iid = getattr(ns, "instance_id", None)
             if not iid:
                 print("error: instance_id required", file=sys.stderr)
                 return 12
-            # Delete sessions for the given instance id
+            # Delete instance from both tables
             import sqlite3 as _sqlite3
             from pathlib import Path as _Path
 
             db_path = _Path.home() / ".claude-ipc-data" / "messages.db"
-            removed = 0
+            removed_sessions = 0
+            removed_instances = 0
             try:
                 conn = _sqlite3.connect(db_path)
                 cur = conn.cursor()
+
+                # Delete from sessions table
                 cur.execute("DELETE FROM sessions WHERE instance_id = ?", (iid,))
-                removed = cur.rowcount if cur.rowcount is not None else 0
+                removed_sessions = cur.rowcount if cur.rowcount is not None else 0
+
+                # Delete from instances table
+                cur.execute("DELETE FROM instances WHERE instance_id = ?", (iid,))
+                removed_instances = cur.rowcount if cur.rowcount is not None else 0
+
                 conn.commit()
                 conn.close()
             except Exception:
-                removed = 0
+                removed_sessions = 0
+                removed_instances = 0
             # Idempotent success
-            print(f"instance '{iid}' deleted (removed={removed})")
+            print(f"instance '{iid}' deleted (sessions={removed_sessions}, instances={removed_instances})")
             return 0
+        if ns.subcmd == "list":
+            # List instances with optional unified status
+            if getattr(ns, "full", False):
+                # Unified status: broker + responder
+                try:
+                    from core import responder_proc
+                    import json as _json
+
+                    # Clean up stale responders first
+                    cleanup_stats = responder_proc.cleanup_stale_responders()
+                    if cleanup_stats.get("cleaned", 0) > 0:
+                        print(f"✓ Cleaned {cleanup_stats['cleaned']} stale responder(s)", file=sys.stderr)
+
+                    # Get broker instances
+                    broker_instances = {}
+                    try:
+                        if broker_client:
+                            resp = broker_client.status()
+                            for inst in resp.get("instances", []):
+                                # Broker returns "id" not "instance_id"
+                                instance_id = inst.get("id") or inst.get("instance_id")
+                                if instance_id:
+                                    broker_instances[instance_id] = {
+                                        "broker_registered": True,
+                                        "session_token": inst.get("session_token_hash", "N/A"),
+                                        "last_seen": inst.get("last_seen", "N/A")
+                                    }
+                    except Exception as e:
+                        print(f"⚠ Broker query failed: {e}", file=sys.stderr)
+
+                    # Get responder instances
+                    responder_list = responder_proc.list_all_responders()
+
+                    # Merge data
+                    all_instances = {}
+                    for iid, data in broker_instances.items():
+                        all_instances[iid] = data.copy()
+                        all_instances[iid]["responder_running"] = False
+
+                    for resp in responder_list:
+                        iid = resp["instance_id"]
+                        if iid not in all_instances:
+                            all_instances[iid] = {
+                                "broker_registered": False,
+                                "session_token": "N/A",
+                                "last_seen": "N/A"
+                            }
+                        all_instances[iid].update({
+                            "responder_running": resp["running"],
+                            "responder_pid": resp.get("pid"),
+                            "responder_policy": resp.get("policy"),
+                            "responder_started_at": resp.get("started_at"),
+                            "responder_last_response": resp.get("last_response_at")
+                        })
+
+                    # Display unified status
+                    print(f"\n📊 Unified Instance Status ({len(all_instances)} instance(s)):\n")
+                    if not all_instances:
+                        print("  No instances found.")
+                    else:
+                        for iid, status in sorted(all_instances.items()):
+                            print(f"  Instance: {iid}")
+                            broker_status = "✓ Registered" if status.get("broker_registered") else "✗ Not registered"
+                            responder_status = "✓ Running" if status.get("responder_running") else "✗ Not running"
+                            print(f"    Broker:    {broker_status}")
+                            print(f"    Responder: {responder_status}")
+                            if status.get("responder_running"):
+                                print(f"      PID: {status.get('responder_pid', 'N/A')}")
+                                print(f"      Policy: {status.get('responder_policy', 'N/A')}")
+                                print(f"      Started: {status.get('responder_started_at', 'N/A')}")
+                            print()
+
+                    return 0
+                except Exception as e:
+                    print(f"error: failed to get unified status: {e}", file=sys.stderr)
+                    import traceback
+                    traceback.print_exc()
+                    return 12
+            else:
+                # Simple list from broker
+                try:
+                    if not broker_client:
+                        print("error: broker client unavailable", file=sys.stderr)
+                        return 12
+                    resp = broker_client.status()
+                    instances = resp.get("instances", [])
+                    print(f"\n📋 Broker Instances ({len(instances)} instance(s)):\n")
+                    if not instances:
+                        print("  No instances registered.")
+                    else:
+                        for inst in instances:
+                            # Broker returns "id" not "instance_id"
+                            iid = inst.get("id") or inst.get("instance_id") or "N/A"
+                            print(f"  • {iid}")
+                            print(f"    Last seen: {inst.get('last_seen', 'N/A')}")
+                    print()
+                    return 0
+                except Exception as e:
+                    print(f"error: failed to list instances: {e}", file=sys.stderr)
+                    return 12
         print("unknown instances subcommand", file=sys.stderr)
         return 12
 
@@ -724,15 +992,19 @@ def build_parser() -> argparse.ArgumentParser:
 
     sp.set_defaults(func=_cmd_ask)
 
-    # responder start/stop
+    # responder start/stop/stop-all
     sp = sub.add_parser("responder", help="Manage auto-responder process")
     sub_resp = sp.add_subparsers(dest="subcmd", required=True)
     p_start = sub_resp.add_parser("start", help="Start auto-responder for an instance")
     p_start.add_argument("instance_id")
     p_start.add_argument("--policy", choices=["simple", "smart"], default="simple")
     p_start.add_argument("--detach", action="store_true")
+    p_start_all = sub_resp.add_parser("start-all", help="Start auto-responders for all registered instances")
+    p_start_all.add_argument("--policy", choices=["simple", "smart"], default="simple")
+    p_start_all.add_argument("--detach", action="store_true", default=True)
     p_stop = sub_resp.add_parser("stop", help="Stop auto-responder for an instance")
     p_stop.add_argument("instance_id")
+    p_stop_all = sub_resp.add_parser("stop-all", help="Stop all running auto-responders")
     p_status = sub_resp.add_parser("status", help="Show responder status for an instance")
     p_status.add_argument("instance_id")
 
@@ -754,6 +1026,50 @@ def build_parser() -> argparse.ArgumentParser:
             except Exception as e:
                 print(f"error: failed to start responder: {e}", file=sys.stderr)
                 return 60
+        if ns.subcmd == "start-all":
+            try:
+                # Get all registered instances from broker
+                if not broker_client:
+                    print("error: broker client not available", file=sys.stderr)
+                    return 60
+
+                resp = broker_client.status()
+                instances = resp.get("instances", [])
+
+                if not instances:
+                    print("⚠ No registered instances found in broker")
+                    return 0
+
+                started = 0
+                skipped = 0
+                errors = 0
+
+                print(f"🚀 Starting auto-responders for {len(instances)} instance(s)...\n")
+
+                for inst in instances:
+                    instance_id = inst.get("id") or inst.get("instance_id")
+                    if not instance_id:
+                        continue
+
+                    # Check if responder already running
+                    if responder_proc.is_running(instance_id):
+                        print(f"⏭ Skipped '{instance_id}' (already running)")
+                        skipped += 1
+                        continue
+
+                    try:
+                        proc = responder_proc.start(instance_id, policy=ns.policy, detach=ns.detach)
+                        print(f"✓ Started responder for '{instance_id}' (PID: {proc.pid}, Policy: {ns.policy})")
+                        started += 1
+                    except Exception as e:
+                        print(f"✗ Failed to start '{instance_id}': {e}", file=sys.stderr)
+                        errors += 1
+
+                print(f"\n🎉 Started {started} responder(s), skipped {skipped}, {errors} error(s)")
+                return 0 if errors == 0 else 60
+            except Exception as e:
+                print(f"error: failed to start responders: {e}", file=sys.stderr)
+                return 60
         if ns.subcmd == "stop":
             try:
                 ok = responder_proc.stop(ns.instance_id)
@@ -764,6 +1080,31 @@ def build_parser() -> argparse.ArgumentParser:
                 return 61
             except Exception as e:
                 print(f"error: failed to stop responder: {e}", file=sys.stderr)
+                return 61
+        if ns.subcmd == "stop-all":
+            try:
+                responders = responder_proc.list_all_responders()
+                stopped = 0
+                errors = 0
+
+                for resp in responders:
+                    if resp["running"]:
+                        try:
+                            ok = responder_proc.stop(resp["instance_id"])
+                            if ok:
+                                stopped += 1
+                                print(f"✓ Stopped responder for '{resp['instance_id']}'")
+                            else:
+                                errors += 1
+                                print(f"✗ Failed to stop responder for '{resp['instance_id']}'", file=sys.stderr)
+                        except Exception as e:
+                            errors += 1
+                            print(f"✗ Error stopping '{resp['instance_id']}': {e}", file=sys.stderr)
+
+                print(f"\n🛑 Stopped {stopped} responder(s), {errors} error(s)")
+                return 0 if errors == 0 else 61
+            except Exception as e:
+                print(f"error: failed to stop responders: {e}", file=sys.stderr)
                 return 61
         if ns.subcmd == "status":
             try:
@@ -796,6 +1137,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     # register subcommand
     sp = sub.add_parser("register", help="Register current project with the broker")
+    sp.add_argument("instance_id", nargs="?", help="Instance ID to register (optional, overrides config file)")
     sp.add_argument("--no-default", action="store_true", help="Do not update legacy HOME pointer")
 
     def _cmd_register(args: argparse.Namespace) -> int:
@@ -804,7 +1146,10 @@ def build_parser() -> argparse.ArgumentParser:
             mod = importlib.import_module("cli.commands.register_cmd")
             run_register = getattr(mod, "run_register", None)
             if callable(run_register):
-                return run_register(no_default=getattr(args, "no_default", False))
+                return run_register(
+                    no_default=getattr(args, "no_default", False),
+                    instance_id=getattr(args, "instance_id", None)
+                )
             raise ImportError("run_register not found")
         except Exception:
             # Minimal inline fallback: reuse session --regen path

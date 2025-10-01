@@ -24,8 +24,12 @@ class BrokerManager:
     def __init__(self):
         self.lock_file = Path.home() / ".claude-ipc-data" / "broker.lock"
         self.broker_script = Path(__file__).parent.parent / "src" / "claude_ipc_server.py"
-        self.broker_host = "localhost"
-        self.broker_port = 9876
+        # Allow host/port overrides via environment
+        self.broker_host = os.getenv("IPC_HOST", "127.0.0.1")
+        try:
+            self.broker_port = int(os.getenv("IPC_GLOBAL_PORT", os.getenv("IPC_PORT", "9876")))
+        except ValueError:
+            self.broker_port = 9876
         # 데이터 디렉토리 생성
         self.lock_file.parent.mkdir(parents=True, exist_ok=True)
 
@@ -123,6 +127,7 @@ class BrokerManager:
 
         print(f"  Python: {python_exe}")
         print(f"  Script: {broker_path}")
+        print(f"  Host: {self.broker_host}  Port: {self.broker_port}")
 
         # 브로커 시작
         if sys.platform == "win32":

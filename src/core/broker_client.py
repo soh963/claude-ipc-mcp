@@ -3,16 +3,21 @@ from __future__ import annotations
 import json
 import socket
 import time
+import os
 from typing import Any, Dict, Optional
 
-IPC_HOST = "127.0.0.1"
-IPC_PORT = 9876
+# Allow environment overrides for host/port to support global configuration
+IPC_HOST = os.getenv("IPC_HOST", "127.0.0.1")
+try:
+    IPC_PORT = int(os.getenv("IPC_GLOBAL_PORT", os.getenv("IPC_PORT", "9876")))
+except ValueError:
+    IPC_PORT = 9876
 
 
 def _send_request(request: Dict[str, Any]) -> Dict[str, Any]:
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.settimeout(2.0)
+        s.settimeout(5.0)  # Increased from 2.0 to 5.0 for slower systems
         s.connect((IPC_HOST, IPC_PORT))
         s.send(json.dumps(request).encode("utf-8"))
         resp = s.recv(65536).decode("utf-8")

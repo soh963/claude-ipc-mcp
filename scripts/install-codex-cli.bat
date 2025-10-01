@@ -34,7 +34,7 @@ if %ERRORLEVEL% NEQ 0 (
     pause
     exit /b 1
 )
-echo     √ .cursorrules copied
+echo     [OK] .cursorrules copied
 
 REM Optional: Copy config.toml to .codex directory (if Codex CLI supports it)
 echo.
@@ -48,12 +48,12 @@ if exist "%SOURCE_DIR%\config.toml" (
     echo     Copying config.toml to .codex directory...
     copy /Y "%SOURCE_DIR%\config.toml" "%USERPROFILE%\.codex\config.toml" >nul
     if %ERRORLEVEL% EQU 0 (
-        echo     √ config.toml copied
+        echo     [OK] config.toml copied
     ) else (
-        echo     ! config.toml copy failed (optional)
+        echo     [WARN] config.toml copy failed (optional)
     )
 ) else (
-    echo     ! config.toml not found (optional)
+    echo     [WARN] config.toml not found (optional)
 )
 
 echo.
@@ -64,14 +64,14 @@ echo.
 echo Next steps:
 echo 1. Open your project in Cursor/Codex
 echo 2. Cursor will automatically load .cursorrules
-echo 3. Test with natural language: "IPC 상태 확인해줘"
+echo 3. Test with natural language
 echo.
-echo Example commands:
-echo   - "codex-main으로 IPC 등록해줘"
-echo   - "IPC 상태 확인"
-echo   - "gemini에게 메시지 보내줘: 안녕"
-echo   - "메시지 확인"
-echo   - "자동응답 시작"
+echo Example commands (Korean):
+echo   - IPC setup
+echo   - IPC status check
+echo   - send message to gemini
+echo   - check messages
+echo   - start auto-responder
 echo.
 echo Note: Unlike Gemini CLI, Codex uses natural language
 echo       instead of slash commands like /ipc:status

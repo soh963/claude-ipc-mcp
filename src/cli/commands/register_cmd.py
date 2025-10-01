@@ -17,8 +17,12 @@ def _initialized(root: Path | None = None) -> bool:
 
 
 @with_logging("register")
-def run_register(no_default: bool = False) -> int:
+def run_register(no_default: bool = False, instance_id: str | None = None) -> int:
     """Register this project instance with the broker and persist session.
+
+    Args:
+        no_default: Whether to skip default instance_id from config
+        instance_id: Optional instance_id to override config file
 
     Prints JSON: {"instance_id", "session_token"} on success.
     Returns 0 on success, 12 on failure (to match router conventions).
@@ -35,7 +39,8 @@ def run_register(no_default: bool = False) -> int:
     except Exception:
         pass
 
-    instance = default_instance_id(root)
+    # Use provided instance_id or read from config
+    instance = instance_id if instance_id else default_instance_id(root)
 
     # Derive auth token from shared secret
     shared = os.environ.get("IPC_SHARED_SECRET", "")

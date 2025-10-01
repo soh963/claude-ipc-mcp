@@ -177,3 +177,65 @@ def _read_status_meta(instance_id: str) -> dict:
     except Exception:
         pass
     return {}
+
+
+def cleanup_stale_responders() -> dict:
+    """Clean up PID and status files for responders that are no longer running.
+
+    Returns dict with cleanup statistics.
+    """
+    base = _data_dirs() / "responders"
+    if not base.exists():
+        return {"cleaned": 0, "errors": 0}
+
+    cleaned = 0
+    errors = 0
+
+    try:
+        for pid_file in base.glob("*.pid"):
+            try:
+                instance_id = pid_file.stem
+                if not is_running(instance_id):
+                    # Remove stale PID file
+                    pid_file.unlink(missing_ok=True)
+                    # Remove corresponding status file
+                    status_file = _status_file(instance_id)
+                    status_file.unlink(missing_ok=True)
+                    cleaned += 1
+            except Exception:
+                errors += 1
+    except Exception:
+        errors += 1
+
+    return {"cleaned": cleaned, "errors": errors}
+
+
+def list_all_responders() -> list:
+    """List all responder instances (both running and stopped).
+
+    Returns list of dicts with instance info.
+    """
+    base = _data_dirs() / "responders"
+    if not base.exists():
+        return []
+
+    responders = []
+    try:
+        for pid_file in base.glob("*.pid"):
+            instance_id = pid_file.stem
+            running = is_running(instance_id)
+            info = get_info(instance_id)
+
+            responders.append({
+                "instance_id": instance_id,
+                "running": running,
+                "pid": info.pid,
+                "started_at": info.started_at,
+                "last_response_at": info.last_response_at,
+                "last_check_at": info.last_check_at,
+                "policy": info.policy,
+            })
+    except Exception:
+        pass
+
+    return responders
