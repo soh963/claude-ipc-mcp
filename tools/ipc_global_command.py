@@ -577,11 +577,63 @@ Documentation: docs/IPC_UNIFIED_GUIDE_KO.md
     # messages clear
     sp = sub.add_parser("messages", help="Manage project messages")
     sub_msg = sp.add_subparsers(dest="subcmd", required=True)
+    sp_list = sub_msg.add_parser("list", help="List project messages")
+    sp_list.add_argument("--instance", help="List messages for specific instance")
     sp_clear = sub_msg.add_parser("clear", help="Clear project messages")
     sp_clear.add_argument("--force", action="store_true")
     sp_clear.add_argument("--all", action="store_true", help="Clear ALL messages from broker (global)")
 
     def _cmd_messages(ns: argparse.Namespace) -> int:
+        if ns.subcmd == "list":
+            # List messages from broker
+            import sqlite3 as _sqlite3
+            from pathlib import Path as _Path
+
+            db_path = _Path.home() / ".claude-ipc-data" / "messages.db"
+            if not db_path.exists():
+                print("No messages found (database doesn't exist)")
+                return 0
+
+            try:
+                conn = _sqlite3.connect(db_path)
+                cur = conn.cursor()
+
+                if ns.instance:
+                    # List messages for specific instance
+                    cur.execute("""
+                        SELECT timestamp, from_id, to_id, content
+                        FROM messages
+                        WHERE to_id = ? OR from_id = ?
+                        ORDER BY timestamp DESC
+                        LIMIT 50
+                    """, (ns.instance, ns.instance))
+                else:
+                    # List all recent messages
+                    cur.execute("""
+                        SELECT timestamp, from_id, to_id, content
+                        FROM messages
+                        ORDER BY timestamp DESC
+                        LIMIT 50
+                    """)
+
+                rows = cur.fetchall()
+                conn.close()
+
+                if not rows:
+                    print("No messages found")
+                    return 0
+
+                print(f"\n📬 Messages ({len(rows)} shown):\n")
+                for timestamp, from_id, to_id, content in rows:
+                    print(f"  [{timestamp}] {from_id} → {to_id}")
+                    print(f"    {content}")
+                    print()
+
+                return 0
+            except Exception as e:
+                print(f"error: failed to list messages: {e}", file=sys.stderr)
+                return 12
+
         if ns.subcmd == "clear":
             # Check --all flag for global deletion
             clear_all = getattr(ns, "all", False)

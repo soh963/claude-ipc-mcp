@@ -39,11 +39,11 @@ def run_rename(old_name: str, new_name: str) -> int:
 
     # Read current session
     session = read_session(root)
-    if not session or session.get("instance_id") != old_name:
+    if not session or session.instance_id != old_name:
         print(f"error: not registered as '{old_name}' in this project")
         return 12
 
-    session_token = session.get("session_token")
+    session_token = session.session_token
     if not session_token:
         print("error: no valid session token found")
         return 12
