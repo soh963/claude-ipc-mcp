@@ -102,6 +102,12 @@ List instances                      # See who's online
 - **[docs/platform-guides/CLAUDE_CODE_SETUP.md](docs/platform-guides/CLAUDE_CODE_SETUP.md)** - Claude Code slash commands setup (NEW)
 - **[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** - Common issues and solutions
 
+### AI CLI Integration (NEW)
+- **[docs/IPC_CLI_INTEGRATION_SUMMARY.md](docs/IPC_CLI_INTEGRATION_SUMMARY.md)** - Complete CLI integration across all platforms
+- **[docs/claude-commands/INSTALL.md](docs/claude-commands/INSTALL.md)** - Claude Code slash commands (25 commands)
+- **[docs/gemini-commands/INSTALL.md](docs/gemini-commands/INSTALL.md)** - Gemini CLI integration (24 commands)
+- **[docs/codex-config.toml](docs/codex-config.toml)** - Codex CLI configuration (24 commands)
+
 ### Korean Documentation
 - **[GLOBAL_USAGE_KO.md](docs/GLOBAL_USAGE_KO.md)** - 글로벌 사용 가이드(한글)
 - **[IPC CLI 명령 (KO)](docs/ipc_cli_commands.md)** - 통합 CLI 사용법과 옵션(한글)
