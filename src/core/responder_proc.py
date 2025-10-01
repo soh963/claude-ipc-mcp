@@ -87,8 +87,8 @@ def start(instance_id: str, policy: str = "simple", detach: bool = False) -> Res
     creationflags = 0
     popen_kwargs = {}
     if os.name == "nt":
-        # CREATE_NEW_PROCESS_GROUP | DETACHED_PROCESS
-        creationflags = 0x00000200 | 0x00000008
+        # CREATE_NEW_PROCESS_GROUP | DETACHED_PROCESS | CREATE_NO_WINDOW
+        creationflags = 0x00000200 | 0x00000008 | 0x08000000
         popen_kwargs["creationflags"] = creationflags
     proc = subprocess.Popen(
         [sys.executable, str(script)],
