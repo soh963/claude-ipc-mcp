@@ -118,29 +118,89 @@ $commands = @{
     }
 }
 
-# Create command files
+# Create command files (.md format for Claude Code)
 Write-Host "Installing IPC slash commands..." -ForegroundColor Green
 $installed = 0
 
-foreach ($cmdName in $commands.Keys) {
-    $cmdData = $commands[$cmdName]
-    $cmdFile = "$commandsDir\$cmdName.json"
+# Helper function to create .md command file
+function Create-CommandFile {
+    param($name, $desc, $cmd, $args_desc = $null, $example = $null)
 
-    $cmdJson = @{
-        command = $cmdData.command
-        description = $cmdData.description
-        category = $cmdData.category
-    }
+    $content = @"
+---
+allowed-tools: [Bash]
+description: "$desc"
+---
 
-    if ($cmdData.requires_args) {
-        $cmdJson.requires_args = $cmdData.requires_args
-        $cmdJson.arg_names = $cmdData.arg_names
-    }
+# /$name - $($desc -replace '📊|📝|👥|💬|❓|📬|📢|🤖|📊|🛑|🏥|🚀|🏓|✏️|🎯', '' -replace '^\s+', '')
 
-    $cmdJson | ConvertTo-Json -Depth 10 | Out-File -FilePath $cmdFile -Encoding UTF8
-    Write-Host "  ✓ Installed: /$cmdName" -ForegroundColor Gray
-    $installed++
+## Purpose
+$(if ($args_desc) { $args_desc } else { $desc })
+
+## Usage
+``````
+/$name$(if ($args_desc) { " <args>" } else { "" })
+``````
+
+## Execution
+``````bash
+cd $projectRoot
+$cmd
+``````
+$(if ($example) { @"
+
+## Example
+``````
+$example
+``````
+"@ } else { "" })
+"@
+
+    $content | Out-File -FilePath "$commandsDir\$name.md" -Encoding UTF8 -NoNewline
 }
+
+# Create all command files
+Create-CommandFile "ipc-status" "Check IPC broker connection status" "uv run python tools\ipc_global_command.py status"
+
+Create-CommandFile "ipc-register" "Register this instance with IPC broker" "uv run python tools\ipc_global_command.py register [INSTANCE]" `
+    "Register this Claude Code instance with the IPC message broker" "/ipc-register my-instance"
+
+Create-CommandFile "ipc-list" "List all registered IPC instances" "uv run python tools\ipc_global_command.py instances list --full"
+
+Create-CommandFile "ipc-send" "Send message to another instance" "uv run python tools\ipc_global_command.py chat --to [TARGET] `"[MESSAGE]`"" `
+    "Send a message without waiting for response" "/ipc-send gemini `"Build complete`""
+
+Create-CommandFile "ipc-ask" "Send message and wait for response" "uv run python tools\ipc_global_command.py ask --to [TARGET] `"[MESSAGE]`" --timeout 10" `
+    "Send message and wait up to 10 seconds for response" "/ipc-ask gemini `"Status?`""
+
+Create-CommandFile "ipc-check" "Check messages for this instance" "uv run python tools\ipc_global_command.py messages list"
+
+Create-CommandFile "ipc-broadcast" "Broadcast message to all instances" "uv run python tools\ipc_global_command.py broadcast `"[MESSAGE]`"" `
+    "Send message to all registered instances" "/ipc-broadcast `"System restart in 5 min`""
+
+Create-CommandFile "ipc-responder-start" "Start auto-responder for instance" "uv run python tools\ipc_global_command.py responder start [INSTANCE] --policy smart --detach" `
+    "Start automatic responder process" "/ipc-responder-start gemini"
+
+Create-CommandFile "ipc-responder-status" "Check auto-responder status" "uv run python tools\ipc_global_command.py responder status [INSTANCE]" `
+    "Check if auto-responder is running" "/ipc-responder-status gemini"
+
+Create-CommandFile "ipc-responder-stop" "Stop auto-responder for instance" "uv run python tools\ipc_global_command.py responder stop [INSTANCE]" `
+    "Stop auto-responder process" "/ipc-responder-stop gemini"
+
+Create-CommandFile "ipc-doctor" "Run IPC diagnostics and auto-fix issues" "uv run python tools\ipc_doctor.py --auto-fix"
+
+Create-CommandFile "ipc-init" "Initialize IPC in current project" "uv run python tools\ipc_global_command.py init"
+
+Create-CommandFile "ipc-ping" "Ping IPC broker to test connectivity" "uv run python tools\ipc_global_command.py ping"
+
+Create-CommandFile "ipc-rename" "Rename an IPC instance" "uv run python tools\ipc_global_command.py rename --from [OLD] --to [NEW]" `
+    "Rename instance (rate limited: 1/hour)" "/ipc-rename old-name new-name"
+
+Create-CommandFile "ipc-setup" "Complete IPC setup" "uv run python tools\ipc_onboard.py --name [INSTANCE] --policy smart" `
+    "Register instance and start auto-responder" "/ipc-setup my-instance"
+
+$installed = 15
+Write-Host "  ✓ Created 15 IPC command files (.md format)" -ForegroundColor Gray
 
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Green
