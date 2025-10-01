@@ -1,0 +1,37 @@
+# IPC Send Message Command for Gemini CLI
+# Send a message to another AI instance
+
+[command]
+name = "ipc:send"
+description = "💬 Send message to another instance"
+prompt = "Send IPC message"
+category = "ipc"
+version = "1.0.0"
+
+[command.parameters]
+from_instance = { type = "string", required = true, prompt = "Send IPC message" }
+to_instance = { type = "string", required = true, prompt = "Send IPC message" }
+message = { type = "string", required = true, prompt = "Send IPC message" }
+
+[command.execution]
+type = "shell"
+command = "uv run python %IPC_CHAT%\\tools\\chat_once.py {from_instance} {to_instance} \"{message}\""
+working_directory = "%IPC_CHAT%"
+timeout = 15000
+
+[command.output]
+format = "json"
+success_message = "✅ Message sent to {to_instance}"
+
+[command.help]
+usage = "/ipc:send FROM TO MESSAGE"
+examples = [
+    "/ipc:send gemini-main claude-worker \"Can you help with API design?\"",
+    "/ipc:send my-instance target-instance \"Build completed\""
+]
+notes = """
+What happens:
+- 📤 Message is queued in broker
+- 🔔 Target instance receives notification
+- 🤖 Auto-responder may reply automatically
+"""

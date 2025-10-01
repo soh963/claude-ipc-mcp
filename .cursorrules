@@ -1,0 +1,95 @@
+# Cursor Rules for IPC Integration
+# Copy this file to your project root as .cursorrules
+
+## IPC Command Integration
+
+You have access to Claude IPC MCP commands. When the user mentions IPC-related tasks, automatically execute the appropriate commands.
+
+### Available IPC Commands
+
+#### Setup and Status
+- **IPC Setup**: `uv run python D:\claude-ipc-mcp\tools\ipc_onboard.py --name <instance-name> --policy smart`
+  - Use when: User wants to register or setup IPC
+  - Example prompts: "IPC 설정해줘", "codex-main으로 등록해줘"
+
+- **IPC Status**: `uv run python D:\claude-ipc-mcp\tools\ipc_global_command.py status --json`
+  - Use when: User asks about IPC status or connectivity
+  - Example prompts: "IPC 상태 확인", "브로커 연결 확인"
+
+- **List Instances**: `uv run python D:\claude-ipc-mcp\tools\ipc_global_command.py instances --json`
+  - Use when: User wants to see active instances
+  - Example prompts: "인스턴스 목록", "누가 온라인이야"
+
+#### Messaging
+- **Send Message**: `uv run python D:\claude-ipc-mcp\tools\chat_once.py <from> <to> "<message>"`
+  - Use when: User wants to send a message
+  - Example prompts: "gemini에게 메시지 보내", "claude-worker에게 알려줘"
+
+- **Check Messages**: `uv run python D:\claude-ipc-mcp\tools\ipc_global_command.py messages check --instance <name> --json`
+  - Use when: User wants to check messages
+  - Example prompts: "메시지 확인", "새 메시지 있어?"
+
+#### Auto-Responder
+- **Start Responder**: `uv run python D:\claude-ipc-mcp\tools\ipc_global_command.py responder start <instance> --policy smart --detach`
+  - Use when: User wants to start auto-responder
+  - Example prompts: "자동응답 시작", "responder 켜줘"
+
+- **Responder Status**: `uv run python D:\claude-ipc-mcp\tools\ipc_global_command.py responder status <instance> --json`
+  - Use when: User asks about responder status
+  - Example prompts: "responder 상태", "자동응답 작동 중?"
+
+- **Stop Responder**: `uv run python D:\claude-ipc-mcp\tools\ipc_global_command.py responder stop <instance> --json`
+  - Use when: User wants to stop auto-responder
+  - Example prompts: "responder 정지", "자동응답 꺼줘"
+
+#### Diagnostics
+- **IPC Doctor**: `uv run python D:\claude-ipc-mcp\tools\ipc_doctor.py --auto-fix --json`
+  - Use when: User reports issues or wants diagnostics
+  - Example prompts: "IPC 문제 진단", "연결 안돼", "doctor 실행"
+
+### Automatic Trigger Patterns
+
+When you detect these Korean phrases, automatically run the corresponding IPC command:
+
+1. **"IPC 설정"**, **"등록해줘"**, **"setup"** → Run IPC Setup
+2. **"상태 확인"**, **"연결 확인"**, **"status"** → Run IPC Status
+3. **"목록"**, **"인스턴스"**, **"list"** → List Instances
+4. **"메시지 보내"**, **"전달해줘"**, **"send"** → Send Message (ask for details)
+5. **"메시지 확인"**, **"check"** → Check Messages
+6. **"자동응답 시작"**, **"responder start"** → Start Responder
+7. **"responder 상태"**, **"자동응답 확인"** → Responder Status
+8. **"responder 정지"**, **"자동응답 꺼"** → Stop Responder
+9. **"진단"**, **"doctor"**, **"문제 해결"** → Run IPC Doctor
+
+### Response Format
+
+After running IPC commands:
+1. Show the command executed
+2. Display the JSON response in a formatted way
+3. Explain what the response means in Korean
+4. Suggest next actions if relevant
+
+### Example Interaction
+
+```
+User: "codex-main으로 IPC 등록하고 자동응답 시작해줘"
+
+You:
+1. Execute: uv run python D:\claude-ipc-mcp\tools\ipc_onboard.py --name codex-main --policy smart
+2. Show response
+3. Confirm: "✅ codex-main으로 등록되었고 자동응답이 시작되었습니다."
+```
+
+### Important Notes
+
+- Always use absolute paths for commands
+- Use `uv run python` prefix for Python scripts
+- Parse JSON responses and explain them in Korean
+- If a command fails, automatically suggest running IPC Doctor
+- When sending messages, ask for missing parameters (from, to, message)
+
+### Environment Variables
+
+- IPC_CHAT: D:\claude-ipc-mcp
+- IPC_HOST: 127.0.0.1
+- IPC_GLOBAL_PORT: 9876

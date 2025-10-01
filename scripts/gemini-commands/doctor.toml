@@ -1,0 +1,37 @@
+# IPC Doctor Command for Gemini CLI
+# Diagnose and automatically fix common IPC issues
+
+[command]
+name = "ipc:doctor"
+description = "🏥 Diagnose and fix IPC issues"
+prompt = "Diagnose and fix IPC issues"
+category = "ipc"
+version = "1.0.0"
+
+[command.execution]
+type = "shell"
+command = "uv run python %IPC_CHAT%\\tools\\ipc_doctor.py --auto-fix --json"
+working_directory = "%IPC_CHAT%"
+timeout = 30000
+
+[command.output]
+format = "json"
+fields = ["broker_status", "database_status", "session_status", "fixes_applied", "errors"]
+
+[command.help]
+usage = "/ipc:doctor"
+examples = ["/ipc:doctor"]
+notes = """
+Checks:
+- 🔌 Broker connectivity
+- 💾 Database integrity
+- 🔑 Session token validity
+- 🤖 Auto-responder health
+- 📁 File permissions
+
+Fixes:
+- 🔄 Restart dead broker
+- 🔧 Reset expired sessions
+- 🛠️ Fix database schema
+- 🧹 Clean up zombie processes
+"""

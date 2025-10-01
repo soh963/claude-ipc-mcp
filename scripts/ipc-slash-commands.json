@@ -1,0 +1,101 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "IPC Slash Commands for AI CLI Integration",
+  "description": "Cross-platform slash commands for Claude IPC messaging system",
+  "version": "1.0.0",
+  "slash_commands": {
+    "/ipc-setup": {
+      "description": "🚀 Complete IPC setup (register + auto-responder)",
+      "command": "uv run python tools/ipc_onboard.py --name ${CLI_NAME} --policy smart",
+      "category": "ipc",
+      "show_in_help": true,
+      "prompt_for": ["CLI_NAME"],
+      "interactive": true,
+      "aliases": ["/ipc-init", "/ipc-onboard"]
+    },
+    "/ipc-status": {
+      "description": "📊 Check IPC connection and responder status",
+      "command": "uv run python tools/ipc_global_command.py status --json",
+      "category": "ipc",
+      "show_in_help": true,
+      "format_output": "json"
+    },
+    "/ipc-list": {
+      "description": "👥 List all active AI instances",
+      "command": "uv run python tools/ipc_global_command.py instances --format table",
+      "category": "ipc",
+      "show_in_help": true,
+      "format_output": "table",
+      "aliases": ["/ipc-instances", "/ipc-who"]
+    },
+    "/ipc-send": {
+      "description": "💬 Send message to another AI instance",
+      "command": "uv run python tools/chat_once.py ${FROM} ${TO} '${MESSAGE}'",
+      "category": "ipc",
+      "show_in_help": true,
+      "prompt_for": ["FROM", "TO", "MESSAGE"],
+      "interactive": true,
+      "aliases": ["/ipc-msg", "/ipc-chat"]
+    },
+    "/ipc-check": {
+      "description": "📬 Check for new messages",
+      "command": "uv run python tools/ipc_global_command.py messages check --instance ${INSTANCE_ID}",
+      "category": "ipc",
+      "show_in_help": true,
+      "prompt_for": ["INSTANCE_ID"],
+      "interactive": true,
+      "aliases": ["/ipc-inbox", "/ipc-messages"]
+    },
+    "/ipc-responder-start": {
+      "description": "🤖 Start auto-responder for this instance",
+      "command": "uv run python tools/ipc_global_command.py responder start ${INSTANCE_ID} --policy ${POLICY} --detach",
+      "category": "ipc",
+      "show_in_help": true,
+      "prompt_for": ["INSTANCE_ID", "POLICY"],
+      "interactive": true,
+      "defaults": {
+        "POLICY": "smart"
+      }
+    },
+    "/ipc-responder-status": {
+      "description": "🔍 Check auto-responder status",
+      "command": "uv run python tools/ipc_global_command.py responder status ${INSTANCE_ID}",
+      "category": "ipc",
+      "show_in_help": true,
+      "prompt_for": ["INSTANCE_ID"],
+      "interactive": true
+    },
+    "/ipc-responder-stop": {
+      "description": "⏹️ Stop auto-responder",
+      "command": "uv run python tools/ipc_global_command.py responder stop ${INSTANCE_ID}",
+      "category": "ipc",
+      "show_in_help": true,
+      "prompt_for": ["INSTANCE_ID"],
+      "interactive": true
+    },
+    "/ipc-doctor": {
+      "description": "🏥 Diagnose and fix IPC connection issues",
+      "command": "uv run python tools/ipc_doctor.py --auto-fix",
+      "category": "ipc",
+      "show_in_help": true,
+      "aliases": ["/ipc-fix", "/ipc-debug"]
+    }
+  },
+  "installation": {
+    "claude_code": {
+      "config_dir": "~/.claude",
+      "config_file": "slash-commands.json",
+      "merge_strategy": "deep"
+    },
+    "gemini_cli": {
+      "config_dir": "~/.gemini",
+      "config_file": "slash-commands.json",
+      "merge_strategy": "deep"
+    },
+    "codex_cli": {
+      "config_dir": "~/.codex",
+      "config_file": "slash-commands.json",
+      "merge_strategy": "deep"
+    }
+  }
+}

@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# IPC CLI wrapper for Git Bash
+cd /d/claude-ipc-mcp
+uv run python tools/ipc_global_command.py "$@"

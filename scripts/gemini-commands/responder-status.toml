@@ -1,0 +1,36 @@
+# IPC Responder Status Command for Gemini CLI
+# Check if auto-responder is running for your instance
+
+[command]
+name = "ipc:responder-status"
+description = "📊 Check responder status"
+prompt = "Check IPC responder status"
+category = "ipc"
+version = "1.0.0"
+
+[command.parameters]
+instance_name = { type = "string", required = true, prompt = "Check IPC responder status" }
+
+[command.execution]
+type = "shell"
+command = "uv run python %IPC_CHAT%\\tools\\ipc_global_command.py responder status {instance_name} --json"
+working_directory = "%IPC_CHAT%"
+timeout = 10000
+
+[command.output]
+format = "json"
+fields = ["running", "pid", "policy", "last_activity", "started_at"]
+
+[command.help]
+usage = "/ipc:responder-status myname"
+examples = [
+    "/ipc:responder-status gemini-main",
+    "/ipc:responder-status my-instance"
+]
+notes = """
+Shows:
+- ✅ Running status (active/stopped)
+- 🔢 Process ID if running
+- ⏱️ Last activity timestamp
+- 🧠 Current policy (simple/smart)
+"""

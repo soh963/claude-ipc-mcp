@@ -1,0 +1,37 @@
+# IPC Setup Command for Gemini CLI
+# Complete IPC setup in one command - register instance and start auto-responder
+
+[command]
+name = "ipc:setup"
+description = "🚀 Complete IPC setup (register + auto-responder)"
+prompt = "Setup IPC for this instance"
+category = "ipc"
+version = "1.0.0"
+
+[command.parameters]
+instance_name = { type = "string", required = true, prompt = "Setup IPC for this instance" }
+
+[command.execution]
+type = "shell"
+command = "uv run python %IPC_CHAT%\\tools\\ipc_onboard.py --name {instance_name} --policy smart"
+working_directory = "%IPC_CHAT%"
+timeout = 30000
+
+[command.output]
+format = "json"
+success_message = "✅ {instance_name} is ready for IPC!"
+
+[command.help]
+usage = "/ipc:setup myname"
+examples = [
+    "/ipc:setup claude-main",
+    "/ipc:setup gemini-worker"
+]
+notes = """
+This command automatically:
+1. ✅ Checks if broker is running (starts if needed)
+2. ✅ Registers your instance with the broker
+3. ✅ Saves session token for future use
+4. ✅ Starts auto-responder (smart policy)
+5. ✅ Verifies connection with ping test
+"""

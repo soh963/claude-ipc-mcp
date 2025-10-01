@@ -1,0 +1,22 @@
+# IPC Status Command for Gemini CLI - Version 2
+# Testing with explicit prompt typing
+
+[command]
+name = "ipc:status-v2"
+description = "📊 Check IPC connection status"
+category = "ipc"
+version = "1.0.0"
+
+[command.prompt]
+text = "Execute IPC command"
+type = "confirmation"
+
+[command.execution]
+type = "shell"
+command = "uv run python %IPC_CHAT%\\tools\\ipc_global_command.py status --json"
+working_directory = "%IPC_CHAT%"
+timeout = 10000
+
+[command.output]
+format = "json"
+fields = ["broker_status", "instance_id", "responder_status"]

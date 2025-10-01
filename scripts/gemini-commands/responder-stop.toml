@@ -1,0 +1,34 @@
+# IPC Stop Responder Command for Gemini CLI
+# Stop auto-responder for this instance
+
+[command]
+name = "ipc:responder-stop"
+description = "🛑 Stop auto-responder"
+prompt = "Stop IPC responder"
+category = "ipc"
+version = "1.0.0"
+
+[command.parameters]
+instance_name = { type = "string", required = true, prompt = "Stop IPC responder" }
+
+[command.execution]
+type = "shell"
+command = "uv run python %IPC_CHAT%\\tools\\ipc_global_command.py responder stop {instance_name} --json"
+working_directory = "%IPC_CHAT%"
+timeout = 10000
+
+[command.output]
+format = "json"
+success_message = "✅ Auto-responder stopped for {instance_name}"
+
+[command.help]
+usage = "/ipc:responder-stop myname"
+examples = [
+    "/ipc:responder-stop gemini-main",
+    "/ipc:responder-stop my-instance"
+]
+notes = """
+Stops the background auto-responder process.
+Messages will no longer be automatically replied to.
+You can restart it with /ipc:responder-start.
+"""

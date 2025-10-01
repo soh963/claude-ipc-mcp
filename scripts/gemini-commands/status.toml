@@ -1,0 +1,30 @@
+# IPC Status Command for Gemini CLI
+# Check IPC connection status and responder state
+
+[command]
+name = "ipc:status"
+description = "📊 Check IPC connection status"
+prompt = "Check IPC status"
+category = "ipc"
+version = "1.0.0"
+
+[command.execution]
+type = "shell"
+command = "uv run python %IPC_CHAT%\\tools\\ipc_global_command.py status --json"
+working_directory = "%IPC_CHAT%"
+timeout = 10000
+
+[command.output]
+format = "json"
+fields = ["broker_status", "instance_id", "responder_status", "session_valid", "last_activity"]
+
+[command.help]
+usage = "/ipc:status"
+examples = ["/ipc:status"]
+notes = """
+Shows:
+- 🔌 Broker connection status
+- 📝 Your instance registration
+- 🤖 Auto-responder status
+- ⏱️ Recent message activity
+"""

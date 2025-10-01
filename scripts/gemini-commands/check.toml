@@ -1,0 +1,36 @@
+# IPC Check Messages Command for Gemini CLI
+# Check for new messages sent to this instance
+
+[command]
+name = "ipc:check"
+description = "📬 Check for new messages"
+prompt = "Check IPC messages"
+category = "ipc"
+version = "1.0.0"
+
+[command.parameters]
+instance_name = { type = "string", required = true, prompt = "Check IPC messages" }
+
+[command.execution]
+type = "shell"
+command = "uv run python %IPC_CHAT%\\tools\\ipc_global_command.py messages check --instance {instance_name} --json"
+working_directory = "%IPC_CHAT%"
+timeout = 10000
+
+[command.output]
+format = "json"
+fields = ["from", "content", "timestamp", "read_status"]
+
+[command.help]
+usage = "/ipc:check myname"
+examples = [
+    "/ipc:check gemini-main",
+    "/ipc:check my-instance"
+]
+notes = """
+Shows:
+- 📨 List of unread messages
+- 👤 Sender and timestamp
+- 📝 Message content
+- ✅ Read status
+"""

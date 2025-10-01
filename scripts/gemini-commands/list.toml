@@ -1,0 +1,30 @@
+# IPC List Instances Command for Gemini CLI
+# List all AI instances connected to IPC broker
+
+[command]
+name = "ipc:list"
+description = "👥 List all active instances"
+prompt = "List all IPC instances"
+category = "ipc"
+version = "1.0.0"
+
+[command.execution]
+type = "shell"
+command = "uv run python %IPC_CHAT%\\tools\\ipc_global_command.py instances --format json"
+working_directory = "%IPC_CHAT%"
+timeout = 10000
+
+[command.output]
+format = "json"
+fields = ["instance_id", "last_activity", "responder_active", "message_count"]
+
+[command.help]
+usage = "/ipc:list"
+examples = ["/ipc:list"]
+notes = """
+Shows:
+- 👥 All registered instances
+- ⏱️ Last activity timestamp
+- 🤖 Active auto-responders
+- 📨 Message counts
+"""
