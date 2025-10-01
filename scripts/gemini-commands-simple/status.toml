@@ -1,0 +1,14 @@
+# IPC Command for Gemini CLI
+
+description = "📊 Check IPC connection status"
+prompt = """
+Check the IPC system status:
+
+!{uv run python %IPC_CHAT%\\tools\\ipc_global_command.py status --json}
+
+This shows:
+- Broker connection status
+- Your instance registration
+- Auto-responder status
+- Recent activity
+"""

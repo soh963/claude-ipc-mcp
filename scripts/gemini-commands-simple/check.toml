@@ -1,0 +1,12 @@
+# IPC Command for Gemini CLI
+
+description = "📬 Check for new messages"
+prompt = """
+Check for new IPC messages. Provide your instance name:
+
+!{uv run python %IPC_CHAT%\\tools\\ipc_global_command.py messages check --instance {{args}}}
+
+Example: /ipc:check gemini-main
+
+Shows all unread messages sent to your instance.
+"""

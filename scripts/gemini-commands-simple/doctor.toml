@@ -1,0 +1,16 @@
+# IPC Command for Gemini CLI
+
+description = "🏥 Diagnose and fix IPC issues"
+prompt = """
+Run IPC diagnostics and automatically fix common issues:
+
+!{uv run python %IPC_CHAT%\\tools\\ipc_doctor.py --auto-fix --json}
+
+Checks:
+- Broker connectivity
+- Database integrity
+- Session token validity
+- File permissions
+
+Automatically fixes detected issues.
+"""

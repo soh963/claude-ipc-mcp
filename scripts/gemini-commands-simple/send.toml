@@ -1,0 +1,13 @@
+# IPC Command for Gemini CLI
+
+description = "💬 Send message to another instance"
+prompt = """
+Send an IPC message. Provide arguments as: from_instance to_instance "message"
+
+!{uv run python %IPC_CHAT%\\tools\\chat_once.py {{args}}}
+
+Example usage:
+/ipc:send gemini-main claude-worker "Can you review the API design?"
+
+The message will be queued in the broker and delivered to the target instance.
+"""

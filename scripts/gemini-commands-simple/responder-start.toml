@@ -1,0 +1,12 @@
+# IPC Command for Gemini CLI
+
+description = "🤖 Start auto-responder"
+prompt = """
+Start the auto-responder for your instance. Provide instance name and optionally policy (simple or smart):
+
+!{uv run python %IPC_CHAT%\\tools\\ipc_global_command.py responder start {{args}} --detach}
+
+Example: /ipc:responder-start gemini-main smart
+
+The responder runs in background and automatically replies to incoming messages.
+"""

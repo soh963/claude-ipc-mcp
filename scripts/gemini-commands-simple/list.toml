@@ -1,0 +1,10 @@
+# IPC Command for Gemini CLI
+
+description = "📋 List all IPC instances"
+prompt = """
+List all registered IPC instances:
+
+!{uv run python %IPC_CHAT%\\tools\\ipc_global_command.py instances --json}
+
+Shows all active instances that can receive messages.
+"""

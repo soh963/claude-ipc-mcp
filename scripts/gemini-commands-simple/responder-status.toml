@@ -1,0 +1,12 @@
+# IPC Command for Gemini CLI
+
+description = "📊 Check responder status"
+prompt = """
+Check auto-responder status for your instance. Provide instance name:
+
+!{uv run python %IPC_CHAT%\\tools\\ipc_global_command.py responder status {{args}} --json}
+
+Example: /ipc:responder-status gemini-main
+
+Shows if responder is running, when it was started, and last activity.
+"""

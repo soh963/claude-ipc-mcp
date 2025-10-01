@@ -1,0 +1,17 @@
+# IPC Setup - Register instance and start auto-responder
+
+description = "🚀 Complete IPC setup (register + auto-responder)"
+prompt = """
+Run the IPC setup command to register this instance and start the auto-responder:
+
+!{uv run python %IPC_CHAT%\\tools\\ipc_onboard.py --name {{args}} --policy smart}
+
+This will automatically:
+1. Check if broker is running
+2. Register your instance: {{args}}
+3. Start auto-responder with smart policy
+4. Verify the connection
+
+Usage: /ipc:setup <instance-name>
+Example: /ipc:setup gemini-main
+"""
