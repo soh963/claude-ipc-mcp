@@ -95,21 +95,25 @@ def start_ai_responders(ai_types=None):
             # On Windows, use CREATE_NEW_PROCESS_GROUP to detach
             import platform
             if platform.system() == "Windows":
-                subprocess.Popen(
-                    cmd,
-                    cwd=Path(__file__).parent.parent,
-                    creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS,
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL
-                )
+                # Use os.devnull to prevent 'nul' file creation
+                with open(os.devnull, 'w') as devnull:
+                    subprocess.Popen(
+                        cmd,
+                        cwd=Path(__file__).parent.parent,
+                        creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS,
+                        stdout=devnull,
+                        stderr=devnull
+                    )
             else:
-                subprocess.Popen(
-                    cmd,
-                    cwd=Path(__file__).parent.parent,
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                    start_new_session=True
-                )
+                # Use os.devnull to prevent 'nul' file creation
+                with open(os.devnull, 'w') as devnull:
+                    subprocess.Popen(
+                        cmd,
+                        cwd=Path(__file__).parent.parent,
+                        stdout=devnull,
+                        stderr=devnull,
+                        start_new_session=True
+                    )
 
             print(f"  ✅ {ai_type} responder started")
 

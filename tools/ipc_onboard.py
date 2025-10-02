@@ -23,7 +23,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from core import broker_client
 from core import responder_proc
-from core.project_context import ProjectContext
+from core.project_context import write_session, state_file
 
 
 def check_and_start_broker() -> bool:
@@ -52,11 +52,13 @@ def check_and_start_broker() -> bool:
                 creationflags=subprocess.CREATE_NEW_CONSOLE
             )
         else:  # Unix-like
-            subprocess.Popen(
-                ["python3", str(broker_script)],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL
-            )
+            # Use os.devnull to prevent 'nul' file creation
+            with open(os.devnull, 'w') as devnull:
+                subprocess.Popen(
+                    ["python3", str(broker_script)],
+                    stdout=devnull,
+                    stderr=devnull
+                )
 
         # Wait for broker to start
         print("⏳ Waiting for broker to start...")
@@ -102,11 +104,10 @@ def save_session(instance_id: str, session_token: str) -> bool:
     print(f"\n💾 Saving session...")
 
     try:
-        project_ctx = ProjectContext()
-        project_ctx.save_session(instance_id, session_token)
+        write_session(instance_id, session_token)
 
-        session_file = project_ctx.session_file
-        print(f"✅ Session saved to: {session_file}")
+        session_file_path = state_file()
+        print(f"✅ Session saved to: {session_file_path}")
         return True
 
     except Exception as e:

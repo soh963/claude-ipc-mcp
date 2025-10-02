@@ -81,15 +81,13 @@ echo.
 setx IPC_CHAT "%PROJECT_ROOT%" >nul 2>&1
 echo [92m✓ IPC_CHAT=%PROJECT_ROOT%[0m
 
-:: Update other IPC variables
-setx IPC_DB_PATH "%USERPROFILE%\.claude-ipc-data\messages.db" >nul 2>&1
-echo [92m✓ IPC_DB_PATH=%USERPROFILE%\.claude-ipc-data\messages.db[0m
-
-setx IPC_HOST "127.0.0.1" >nul 2>&1
+:: Update other IPC variables (project-local paths)
+echo [92m✓ Using project-local .ipc/ structure[0m
+echo [92m✓ Database: {project_root}/.ipc/data/ipc.db[0m
+echo [92m✓ Port: Auto-assigned from project ID[0m
 echo [92m✓ IPC_HOST=127.0.0.1[0m
 
-setx IPC_GLOBAL_PORT "9876" >nul 2>&1
-echo [92m✓ IPC_GLOBAL_PORT=9876[0m
+setx IPC_HOST "127.0.0.1" >nul 2>&1
 
 :: ================================================================================
 :: Step 3: Verification
@@ -139,9 +137,10 @@ echo   [92m/ipc:doctor[0m          - Diagnose and fix issues
 echo.
 echo Environment Variables:
 echo   IPC_CHAT=%PROJECT_ROOT%
-echo   IPC_DB_PATH=%USERPROFILE%\.claude-ipc-data\messages.db
+echo   Using project-local .ipc/ structure
+echo   Database: {project_root}/.ipc/data/ipc.db
+echo   Port: Auto-assigned from project ID
 echo   IPC_HOST=127.0.0.1
-echo   IPC_GLOBAL_PORT=9876
 echo.
 echo ========================================
 echo [93m Next Steps:[0m

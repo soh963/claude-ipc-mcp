@@ -51,9 +51,11 @@ def start_responder(instance_id: str) -> Tuple[str, bool, str]:
     """Start simple_auto_responder for an instance in background (best-effort)."""
     script = REPO_ROOT / "tools" / "simple_auto_responder.py"
     try:
-        proc = subprocess.Popen(
-            [PYTHON, str(script), instance_id], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-        )
+        # Use os.devnull to prevent 'nul' file creation
+        with open(os.devnull, 'w') as devnull:
+            proc = subprocess.Popen(
+                [PYTHON, str(script), instance_id], stdout=devnull, stderr=devnull
+            )
         return instance_id, True, f"pid={proc.pid}"
     except Exception as exc:  # noqa: BLE001
         return instance_id, False, str(exc)

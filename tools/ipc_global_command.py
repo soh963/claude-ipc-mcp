@@ -393,6 +393,31 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         return 0
 
 
+def cmd_validate(args: argparse.Namespace) -> int:
+    """Validate all project configurations."""
+    import subprocess
+    import sys
+
+    tool_path = Path(__file__).parent / "ipc_validate.py"
+    result = subprocess.run([sys.executable, str(tool_path)], check=False)
+    return result.returncode
+
+
+def cmd_fix(args: argparse.Namespace) -> int:
+    """Fix all project configurations."""
+    import subprocess
+    import sys
+
+    tool_path = Path(__file__).parent / "ipc_fix_all.py"
+    cmd = [sys.executable, str(tool_path)]
+
+    if args.dry_run:
+        cmd.append("--dry-run")
+
+    result = subprocess.run(cmd, check=False)
+    return result.returncode
+
+
 def build_parser() -> argparse.ArgumentParser:
     description = """
 Claude IPC - Inter-Process Communication for AI Assistants
@@ -461,8 +486,11 @@ Message Management:
   # Clear all messages (cannot be undone)
   ipc messages clear --force        Delete all messages from broker
 
-  # System diagnostics
+  # System diagnostics and maintenance
   ipc doctor                        Check system health and configuration
+  ipc validate                      Validate all project configurations
+  ipc fix                           Fix all projects to use running broker
+  ipc fix --dry-run                 Preview fixes without making changes
 
 Environment Variables:
   IPC_HOST                      Broker host (default: 127.0.0.1)
@@ -503,6 +531,13 @@ Documentation: docs/IPC_UNIFIED_GUIDE_KO.md
 
     sp = sub.add_parser("doctor", help="Diagnose IPC setup")
     sp.set_defaults(func=cmd_doctor)
+
+    sp = sub.add_parser("validate", help="Validate all project configurations")
+    sp.set_defaults(func=cmd_validate)
+
+    sp = sub.add_parser("fix", help="Fix all project configurations to use running broker")
+    sp.add_argument("--dry-run", action="store_true", help="Show what would be fixed without making changes")
+    sp.set_defaults(func=cmd_fix)
 
     # broker start/stop/status
     sp = sub.add_parser("broker", help="Manage global broker process")

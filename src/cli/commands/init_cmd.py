@@ -53,16 +53,20 @@ def create_settings_file(config_dir: Path) -> Path:
 
 
 def create_project_file(state_dir: Path, project_root: Path) -> Path:
-    """Create project.json with project_id; preserve existing ID if present."""
+    """Create project.json with project_id and broker_port; preserve existing ID if present."""
     project_file = state_dir / "project.json"
 
     project_id: Optional[str] = None
+    broker_port: Optional[int] = None
+
     if project_file.exists():
         try:
             existing = json.loads(project_file.read_text(encoding="utf-8"))
             project_id = existing.get("project_id")
+            broker_port = existing.get("broker_port")
         except Exception:
             project_id = None
+            broker_port = None
 
     if not project_id:
         # Generate deterministic ID based on project path
@@ -71,9 +75,28 @@ def create_project_file(state_dir: Path, project_root: Path) -> Path:
         if not str(project_id).startswith("proj_"):
             project_id = f"proj_{project_id}"
 
+    # Get broker port with global broker detection (always detect running broker first)
+    if not broker_port:
+        try:
+            from core.project_port import get_or_create_project_port
+            broker_port, mode = get_or_create_project_port(project_root, force_global=True)
+
+            # Log detection result
+            if mode == "global":
+                print(f"✅ Detected global broker on port {broker_port}")
+            else:
+                print(f"⚠️ Using project-specific broker on port {broker_port}")
+        except Exception as e:
+            # Fallback to default port if detection fails
+            import os
+            broker_port = int(os.getenv("IPC_PORT", os.getenv("IPC_GLOBAL_PORT", "9876")))
+            print(f"⚠️ Broker detection failed, using default port {broker_port}: {e}")
+
     project_data = {
         "project_id": project_id,
         "root_path": str(project_root),
+        "broker_host": "127.0.0.1",
+        "broker_port": broker_port,
         "initialized_by": "ipc init",
     }
 

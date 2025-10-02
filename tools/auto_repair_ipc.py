@@ -115,9 +115,11 @@ class IPCAutoRepair:
                             cmd, shell=True, creationflags=subprocess.CREATE_NEW_CONSOLE
                         )
                     else:
-                        subprocess.Popen(
-                            cmd, shell=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-                        )
+                        # Use os.devnull to prevent 'nul' file creation
+                        with open(os.devnull, 'w') as devnull:
+                            subprocess.Popen(
+                                cmd, shell=False, stdout=devnull, stderr=devnull
+                            )
 
                     # 시작 대기
                     time.sleep(3)

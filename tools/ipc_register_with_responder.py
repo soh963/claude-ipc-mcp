@@ -112,22 +112,26 @@ def start_auto_responder(instance_id: str) -> bool:
             creation_flags |= getattr(subprocess, "CREATE_NO_WINDOW", 0)
             creation_flags |= getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
 
-            subprocess.Popen(
-                [sys.executable, str(responder_script), instance_id],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                creationflags=creation_flags,
-            )
+            # Use os.devnull to prevent 'nul' file creation
+            with open(os.devnull, 'w') as devnull:
+                subprocess.Popen(
+                    [sys.executable, str(responder_script), instance_id],
+                    stdout=devnull,
+                    stderr=devnull,
+                    creationflags=creation_flags,
+                )
             time.sleep(2)
             return True
 
         # POSIX
-        proc = subprocess.Popen(
-            [sys.executable, str(responder_script), instance_id],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            start_new_session=True,
-        )
+        # Use os.devnull to prevent 'nul' file creation
+        with open(os.devnull, 'w') as devnull:
+            proc = subprocess.Popen(
+                [sys.executable, str(responder_script), instance_id],
+                stdout=devnull,
+                stderr=devnull,
+                start_new_session=True,
+            )
         time.sleep(2)
         return proc.poll() is None
     except Exception as exc:  # noqa: BLE001

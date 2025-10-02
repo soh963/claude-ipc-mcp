@@ -4,20 +4,44 @@ import json
 import socket
 import time
 import os
+from pathlib import Path
 from typing import Any, Dict, Optional
 
-# Allow environment overrides for host/port to support global configuration
-IPC_HOST = os.getenv("IPC_HOST", "127.0.0.1")
-try:
-    IPC_PORT = int(os.getenv("IPC_GLOBAL_PORT", os.getenv("IPC_PORT", "9876")))
-except ValueError:
-    IPC_PORT = 9876
+def _get_project_config() -> tuple[str, int]:
+    """Get broker host and port from project config or environment variables."""
+    # 1. Try to read from project-local .ipc/state/project.json
+    try:
+        from core.project_local import detect_project_root
+        project_root = detect_project_root()
+        project_json = project_root / ".ipc" / "state" / "project.json"
+
+        if project_json.exists():
+            config = json.loads(project_json.read_text(encoding="utf-8"))
+            host = config.get("broker_host", "127.0.0.1")
+            port = config.get("broker_port", 9876)
+            return host, int(port)
+    except Exception:
+        pass
+
+    # 2. Fallback to environment variables
+    host = os.getenv("IPC_HOST", "127.0.0.1")
+    try:
+        port = int(os.getenv("IPC_GLOBAL_PORT", os.getenv("IPC_PORT", "9876")))
+    except ValueError:
+        port = 9876
+
+    return host, port
+
+# Get project-specific or global configuration
+IPC_HOST, IPC_PORT = _get_project_config()
 
 
 def _send_request(request: Dict[str, Any]) -> Dict[str, Any]:
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.settimeout(5.0)  # Increased from 2.0 to 5.0 for slower systems
+        # Get timeout from environment variable or use default
+        timeout = float(os.getenv("IPC_TIMEOUT", "30.0"))  # Increased default to 30 seconds
+        s.settimeout(timeout)
         s.connect((IPC_HOST, IPC_PORT))
         s.send(json.dumps(request).encode("utf-8"))
         resp = s.recv(65536).decode("utf-8")

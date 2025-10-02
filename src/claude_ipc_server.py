@@ -21,9 +21,40 @@ import secrets
 from mcp.server import Server
 from mcp.types import Resource, Tool, TextContent
 
-# Configuration
-IPC_HOST = "127.0.0.1"  # Localhost works across WSL instances
-IPC_PORT = 9876  # Choose a port that's likely free
+# Import project config detection
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent))
+
+
+def _get_broker_config() -> tuple[str, int]:
+    """Get broker host and port from project config or environment variables."""
+    # 1. Try to read from project-local .ipc/state/project.json
+    try:
+        from core.project_local import detect_project_root
+
+        project_root = detect_project_root()
+        project_json = project_root / ".ipc" / "state" / "project.json"
+
+        if project_json.exists():
+            config = json.loads(project_json.read_text(encoding="utf-8"))
+            host = config.get("broker_host", "127.0.0.1")
+            port = config.get("broker_port", 9876)
+            return host, int(port)
+    except Exception:
+        pass
+
+    # 2. Fallback to environment variables
+    host = os.getenv("IPC_HOST", "127.0.0.1")
+    try:
+        port = int(os.getenv("IPC_GLOBAL_PORT", os.getenv("IPC_PORT", "9876")))
+    except ValueError:
+        port = 9876
+
+    return host, port
+
+
+# Configuration with priority: project config → env vars → defaults
+IPC_HOST, IPC_PORT = _get_broker_config()
 HEARTBEAT_INTERVAL = 30  # seconds
 
 # Set up logging
@@ -770,8 +801,8 @@ Size: {size_kb:.1f}KB
                 to_id = request["to_id"]
                 message = request["message"]
 
-                # Validate to_id format
-                if not self._validate_instance_id(to_id):
+                # Validate to_id format (allow * and all for broadcast)
+                if to_id not in ("*", "all") and not self._validate_instance_id(to_id):
                     return {"status": "error", "message": "Invalid recipient ID format"}
 
                 # Check message size (10KB threshold)

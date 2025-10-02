@@ -84,14 +84,26 @@ def check_messages(instance_id: str, session_token: str) -> list[dict[str, objec
 
 
 def launch_responder(instance_id: str, monitor: bool) -> Optional[subprocess.Popen]:
-    proc = subprocess.Popen(
-        [PYTHON, str(TOOLS_DIR / "simple_auto_responder.py"), instance_id],
-        cwd=str(REPO_ROOT),
-        stdout=subprocess.PIPE if monitor else subprocess.DEVNULL,
-        stderr=subprocess.STDOUT if monitor else subprocess.DEVNULL,
-        text=True,
-        bufsize=1,
-    )
+    # Use os.devnull to prevent 'nul' file creation
+    if monitor:
+        proc = subprocess.Popen(
+            [PYTHON, str(TOOLS_DIR / "simple_auto_responder.py"), instance_id],
+            cwd=str(REPO_ROOT),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+        )
+    else:
+        with open(os.devnull, 'w') as devnull:
+            proc = subprocess.Popen(
+                [PYTHON, str(TOOLS_DIR / "simple_auto_responder.py"), instance_id],
+                cwd=str(REPO_ROOT),
+                stdout=devnull,
+                stderr=devnull,
+                text=True,
+                bufsize=1,
+            )
     if monitor and proc.stdout is not None:
         threading.Thread(
             target=_stream_output,

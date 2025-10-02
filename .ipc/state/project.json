@@ -1,5 +1,7 @@
 {
   "project_id": "proj_3f5ad8cd",
   "root_path": "D:\\claude-ipc-mcp",
+  "broker_host": "127.0.0.1",
+  "broker_port": 9876,
   "initialized_by": "ipc init"
 }

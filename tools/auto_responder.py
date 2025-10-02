@@ -84,12 +84,12 @@ class AutoResponder:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
 
-            # 나에게 온 새 메시지 확인
+            # 나에게 온 새 메시지 확인 (직접 메시지 + 브로드캐스트)
             cursor.execute(
                 """
-                SELECT id, from_id, content, timestamp
+                SELECT id, from_id, to_id, content, timestamp
                 FROM messages
-                WHERE to_id = ? AND id > ?
+                WHERE (to_id = ? OR to_id = '*' OR to_id = 'all') AND id > ?
                 ORDER BY id ASC
             """,
                 (self.instance_id, self.last_message_id),
@@ -102,14 +102,16 @@ class AutoResponder:
                 print(f"\n🔍 발견된 새 메시지: {len(messages)}개", flush=True)
 
             import re
-            for msg_id, from_id, content, timestamp in messages:
+            for msg_id, from_id, to_id, content, timestamp in messages:
                 self.last_message_id = msg_id
 
                 # 자기 자신에게서 온 메시지는 무시
                 if from_id == self.instance_id:
                     continue
 
-                print(f"\n📥 받은 메시지 [{from_id}]: {content}", flush=True)
+                # 브로드캐스트 메시지 표시
+                msg_type = "📢 브로드캐스트" if to_id in ("*", "all") else "📨 직접 메시지"
+                print(f"\n📥 받은 메시지 ({msg_type}) [{from_id}]: {content}", flush=True)
 
                 # 요청 패턴 분석 및 응답
                 # Extract correlation token if present to echo back
@@ -121,10 +123,11 @@ class AutoResponder:
                 except Exception:
                     corr = None
 
-                response = self.generate_response(content, from_id)
+                response = self.generate_response(content, from_id, is_broadcast=(to_id in ("*", "all")))
                 if response:
                     if corr and f"[corr={corr}]" not in response:
                         response = f"{response} [corr={corr}]"
+                    # 브로드캐스트는 발신자에게만 응답
                     self.send_response(from_id, response)
                     print("✅ 자동 응답 완료!", flush=True)
                 else:
@@ -144,7 +147,7 @@ class AutoResponder:
         except Exception:
             pass
 
-    def generate_response(self, content, from_id):
+    def generate_response(self, content, from_id, is_broadcast=False):
         """요청에 대한 자동 응답 생성"""
         content_lower = content.lower()
         # Correlation token pass-through
@@ -152,14 +155,24 @@ class AutoResponder:
         corr_match = _re.search(r"\[corr=([^\]]+)\]", content)
         corr_suffix = f" [corr={corr_match.group(1)}]" if corr_match else ""
 
+        # 브로드캐스트 메시지에 대한 특별 처리
+        if is_broadcast:
+            # 브로드캐스트에는 간단하게 응답
+            if "안녕" in content or "hello" in content_lower or "hi" in content_lower:
+                return f"👋 안녕하세요 {from_id}님! {self.instance_id}입니다. 브로드캐스트 메시지 수신했습니다!" + corr_suffix
+            elif "반가" in content or "반답" in content:
+                return f"😊 {self.instance_id}에서 인사드립니다!" + corr_suffix
+            # 브로드캐스트는 기본적으로 응답함
+            return f"📢 {self.instance_id}: 메시지 확인했습니다!" + corr_suffix
+
         # 파일 리스트 요청
         if "파일" in content and ("리스트" in content or "목록" in content):
             return self.get_file_list_response()
 
-        # 상태 확인 요청
-        elif "상태" in content or "status" in content_lower:
+        # 상태 확인 요청 (단어 경계 체크)
+        elif _re.search(r'\b상태\b', content) or _re.search(r'\bstatus\b', content_lower):
             return (
-                f"✅ Claude 인스턴스 정상 작동 중. 자동 응답 시스템 활성화됨. 현재 시간: "
+                f"✅ {self.instance_id} 인스턴스 정상 작동 중. 자동 응답 시스템 활성화됨. 현재 시간: "
                 f"{datetime.now().strftime('%H:%M:%S')}" + corr_suffix
             )
 
@@ -174,7 +187,7 @@ class AutoResponder:
         # 인사말
         elif "안녕" in content or "hello" in content_lower or "hi" in content_lower:
             return (
-                f"👋 안녕하세요 {from_id}님! Claude 자동 응답 시스템입니다. 무엇을 도와드릴까요?"
+                f"👋 안녕하세요 {from_id}님! {self.instance_id} 자동 응답 시스템입니다. 무엇을 도와드릴까요?"
                 + corr_suffix
             )
 
@@ -185,14 +198,15 @@ class AutoResponder:
                 + corr_suffix
             )
 
-        # 테스트 메시지
-        elif "테스트" in content or "test" in content_lower:
-            return (
-                f"🧪 테스트 응답: 메시지 수신 및 자동 응답 정상 작동 확인! [from: {from_id}]"
-                + corr_suffix
-            )
-
-        return None
+        # 기본 응답: AI 응답 플레이스홀더 (실제 AI 통합 필요)
+        return (
+            f"🤖 {self.instance_id} AI 응답:\n\n"
+            f"'{content[:100]}...' 메시지를 받았습니다.\n\n"
+            f"⚠️ 현재는 자동 응답 봇입니다. 실제 AI 응답을 위해서는:\n"
+            f"1. Gemini/Claude API 통합 필요\n"
+            f"2. 또는 수동으로 해당 세션에서 응답해주세요.\n\n"
+            f"메시지 발신: {from_id}" + corr_suffix
+        )
 
     def get_file_list_response(self):
         """파일 리스트 응답 생성"""
@@ -248,7 +262,7 @@ class AutoResponder:
 
     def run(self):
         """자동 응답 시스템 실행"""
-        print("🤖 Claude Auto-Responder 시작", flush=True)
+        print(f"🤖 {self.instance_id} Auto-Responder 시작", flush=True)
         print(f"📁 Database: {self.db_path}", flush=True)
         print("=" * 60, flush=True)
         print("자동 응답 모드로 실행 중... (Ctrl+C로 종료)", flush=True)

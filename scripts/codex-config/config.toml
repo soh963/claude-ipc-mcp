@@ -3,21 +3,21 @@
 # or merge with your existing Codex configuration
 
 # ================================================================================
-# IPC Slash Commands - Global Configuration
+# IPC Slash Commands - Project-Local Configuration
+# ================================================================================
+# IMPORTANT: Commands now use 'ipc' wrapper script which:
+# 1. Auto-initializes .ipc in current project directory
+# 2. Uses project-local settings from .ipc/config/project.json
+# 3. No need for IPC_CHAT environment variable
 # ================================================================================
 
-[ipc]
-# IPC project path (update this to your actual path)
-project_path = "D:\\claude-ipc-mcp"
-chat_env = "IPC_CHAT"
-
 # ================================================================================
-# Slash Commands Definition
+# Slash Commands Definition (using ipc wrapper)
 # ================================================================================
 
 # 🚀 IPC Setup - One-click onboarding
 [slash_commands."ipc:setup"]
-command = "uv run python %IPC_CHAT%\\tools\\ipc_onboard.py --name {args[0]} --policy smart"
+command = "ipc register {args[0]} && ipc responder start {args[0]} --policy smart"
 description = "🚀 Complete IPC setup (register + auto-responder)"
 category = "ipc"
 requires_args = 1
@@ -26,30 +26,30 @@ output_format = "json"
 
 # 📊 IPC Status - Check connection
 [slash_commands."ipc:status"]
-command = "uv run python %IPC_CHAT%\\tools\\ipc_global_command.py status --json"
+command = "ipc status --json"
 description = "📊 Check IPC connection status"
 category = "ipc"
 output_format = "json"
 
 # 👥 IPC List - Show all instances
 [slash_commands."ipc:list"]
-command = "uv run python %IPC_CHAT%\\tools\\ipc_global_command.py instances --format json"
+command = "ipc instances list --full"
 description = "👥 List all active instances"
 category = "ipc"
 output_format = "json"
 
 # 💬 IPC Send - Send message
 [slash_commands."ipc:send"]
-command = "uv run python %IPC_CHAT%\\tools\\chat_once.py {args[0]} {args[1]} \"{args[2]}\""
+command = "ipc ask --to {args[0]} \"{args[1]}\" --timeout 10"
 description = "💬 Send message to another instance"
 category = "ipc"
-requires_args = 3
-arg_names = ["from_instance", "to_instance", "message"]
+requires_args = 2
+arg_names = ["to_instance", "message"]
 output_format = "json"
 
 # 📬 IPC Check - Check messages
 [slash_commands."ipc:check"]
-command = "uv run python %IPC_CHAT%\\tools\\ipc_global_command.py messages check --instance {args[0]} --json"
+command = "ipc messages list --instance {args[0]}"
 description = "📬 Check for new messages"
 category = "ipc"
 requires_args = 1
@@ -58,7 +58,7 @@ output_format = "json"
 
 # 🤖 IPC Responder Start
 [slash_commands."ipc:responder-start"]
-command = "uv run python %IPC_CHAT%\\tools\\ipc_global_command.py responder start {args[0]} --policy {args[1]|smart} --detach"
+command = "ipc responder start {args[0]} --policy {args[1]|smart}"
 description = "🤖 Start auto-responder"
 category = "ipc"
 requires_args = 1
@@ -67,7 +67,7 @@ output_format = "json"
 
 # 📊 IPC Responder Status
 [slash_commands."ipc:responder-status"]
-command = "uv run python %IPC_CHAT%\\tools\\ipc_global_command.py responder status {args[0]} --json"
+command = "ipc responder status {args[0]}"
 description = "📊 Check responder status"
 category = "ipc"
 requires_args = 1
@@ -76,7 +76,7 @@ output_format = "json"
 
 # 🛑 IPC Responder Stop
 [slash_commands."ipc:responder-stop"]
-command = "uv run python %IPC_CHAT%\\tools\\ipc_global_command.py responder stop {args[0]} --json"
+command = "ipc responder stop {args[0]}"
 description = "🛑 Stop auto-responder"
 category = "ipc"
 requires_args = 1
@@ -85,37 +85,36 @@ output_format = "json"
 
 # 🏥 IPC Doctor - Diagnose and fix
 [slash_commands."ipc:doctor"]
-command = "uv run python %IPC_CHAT%\\tools\\ipc_doctor.py --auto-fix --json"
+command = "ipc doctor --auto-fix"
 description = "🏥 Diagnose and fix IPC issues"
 category = "ipc"
 output_format = "json"
 
 # ================================================================================
-# Environment Variables
+# Environment Variables (Optional - auto-detected if not set)
 # ================================================================================
 
 [environment]
-# These variables should be set globally or in Codex configuration
-IPC_CHAT = "D:\\claude-ipc-mcp"  # Update to your project path
-IPC_DB_PATH = "%USERPROFILE%\\.claude-ipc-data\\messages.db"
-IPC_HOST = "127.0.0.1"
-IPC_GLOBAL_PORT = "9876"
+# These are now OPTIONAL - the ipc wrapper auto-detects them
+# IPC_DB_PATH = "%USERPROFILE%\\.claude-ipc-data\\messages.db"
+# IPC_HOST = "127.0.0.1"
+# IPC_GLOBAL_PORT = "9876"
 
 # ================================================================================
-# Usage Examples
+# Usage Examples (Project-Local Mode)
 # ================================================================================
 
-# Example 1: Initial Setup
+# Example 1: Initial Setup (registers instance + starts responder)
 # /ipc:setup codex-main
 
-# Example 2: Check Status
+# Example 2: Check Status (uses .ipc/config/project.json settings)
 # /ipc:status
 
-# Example 3: List Instances
+# Example 3: List Instances (shows all registered instances)
 # /ipc:list
 
-# Example 4: Send Message
-# /ipc:send codex-main claude-worker "Can you review this code?"
+# Example 4: Send Message (new simplified syntax)
+# /ipc:send claude-worker "Can you review this code?"
 
 # Example 5: Check Messages
 # /ipc:check codex-main
@@ -133,24 +132,39 @@ IPC_GLOBAL_PORT = "9876"
 # /ipc:doctor
 
 # ================================================================================
-# Installation Instructions
+# Installation Instructions (Simplified for Project-Local Mode)
 # ================================================================================
 
-# 1. Copy this file to: %USERPROFILE%\.codex\config.toml
-#    Or merge with your existing config.toml
+# 1. Ensure 'ipc' command is in PATH:
+#    - Windows: Add D:\claude-ipc-mcp\scripts to PATH
+#    - Or run: D:\claude-ipc-mcp\scripts\install-all-clis.sh
 
-# 2. Update the IPC_CHAT path in [environment] section
+# 2. Copy this file to: %USERPROFILE%\.codex\config.toml
+#    Or merge with your existing config.toml
 
 # 3. Restart Codex CLI
 
-# 4. Test with: /ipc:status
+# 4. Navigate to any project directory and run: /ipc:status
+#    - This auto-creates .ipc/ in your project
+#    - Uses project-local settings automatically
 
 # ================================================================================
 # Troubleshooting
 # ================================================================================
 
 # If commands don't work:
-# 1. Check IPC_CHAT environment variable is set correctly
-# 2. Verify broker is running: /ipc:status
+# 1. Verify 'ipc' command is in PATH: Run 'ipc status' from terminal
+# 2. Check broker is running: /ipc:status
 # 3. Run diagnostics: /ipc:doctor
-# 4. Check Codex logs for error messages
+# 4. Verify .ipc folder exists in your project directory
+# 5. Check Codex logs for error messages
+
+# ================================================================================
+# Key Improvements
+# ================================================================================
+
+# ✅ No hardcoded paths - works from any project directory
+# ✅ Auto-initialization - .ipc folder created automatically
+# ✅ No environment variables needed - uses ipc wrapper script
+# ✅ Project isolation - each project has own .ipc settings
+# ✅ Simplified commands - shorter syntax using ipc aliases

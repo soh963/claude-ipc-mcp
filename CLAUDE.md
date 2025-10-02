@@ -14,18 +14,25 @@ Claude IPC MCP enables inter-process communication between AI assistants (Claude
 
 ```powershell
 # Setup (one-time)
-uv sync                                    # Install dependencies
-./scripts/install-mcp.sh                   # Install for Claude Code (restart required)
+uv sync                                    # Install dependencies (Python 3.12+)
+./scripts/install-mcp.sh                   # Install MCP for Claude Code (restart required)
+./scripts/install-slash-commands.bat       # Install slash commands (Windows, recommended)
 
 # Initialize & verify
 uv run python tools/ipc_global_command.py init      # Create .ipc/ structure
 uv run python tools/ipc_global_command.py status    # Check broker
 uv run python tools/ipc_global_command.py ping      # Test connectivity
 
-# CLI usage
+# CLI usage (unified command interface)
 uv run python tools/ipc_global_command.py ask --to gemini "message" --timeout 10
 uv run python tools/ipc_global_command.py responder start gemini --policy smart --detach
 uv run python tools/ipc_global_command.py responder status gemini
+
+# Slash commands (recommended - more reliable)
+/ipc:setup myname                          # One-click setup (register + auto-responder)
+/ipc:send alice bob "Hello!"               # Send message
+/ipc:check alice                           # Check inbox
+/ipc:status                                # Check connection
 
 # Natural language (MCP tools - after MCP installation)
 Register this instance as myname
@@ -125,19 +132,24 @@ tools/
 
 ```powershell
 # Run all tests
-pytest test/ -v
+uv run pytest test/ -v
 
 # Run specific test suite or function
-pytest test/test_security.py -v
-pytest test/test_security.py::test_session_token_validation -v
-pytest test/ -k "security" -v              # Pattern matching
+uv run pytest test/test_security.py -v
+uv run pytest test/test_security.py::test_session_token_validation -v
+uv run pytest test/ -k "security" -v              # Pattern matching
 
 # Coverage and parallel execution
-pytest test/ -v --cov=src --cov-report=html
-pytest test/ -v -n auto                     # Parallel (faster)
+uv run pytest test/ -v --cov=src --cov-report=html
+uv run pytest test/ -v -n auto                     # Parallel (faster)
 ```
 
-**Main test files**: `test/test_security.py`, `test/test_project_isolation.py`, `test/test_global_ipc.py`
+**Main test files**:
+- `test/test_security.py` - Session tokens, auth, validation
+- `test/test_project_isolation.py` - Per-project .ipc/ isolation
+- `test/test_global_ipc.py` - Global broker functionality
+- `test/test_cross_cli_communication.py` - Cross-platform messaging
+- `test/test_broker_direct.py` - Direct broker testing
 
 ### Code Quality
 
@@ -174,13 +186,25 @@ uv run python tools/start_broker.py                 # Manual start
 
 **New CLI commands**:
 1. Add module in `src/cli/commands/your_cmd.py`
-2. Register in `tools/ipc_global_command.py`
+2. Register in `tools/ipc_global_command.py` (see existing commands for pattern)
 3. Update `docs/ipc_cli_commands.md`
+4. Add tests in `test/test_your_command.py`
+5. Document change in `docs/changes/` if it affects behavior
 
 **Auto-responder development**:
-- Policies: `simple` (echo) or `smart` (context-aware in `src/core/responder_proc.py`)
-- PID: `%USERPROFILE%\.claude-ipc-data\responders\<instance>.pid`
-- State: `%USERPROFILE%\.claude-ipc-data\responders\<instance>.json`
+- **Policies**:
+  - `simple`: Echo messages back to sender
+  - `smart`: Context-aware responses (see `src/core/responder_proc.py`)
+- **Process files**:
+  - PID: `%USERPROFILE%\.claude-ipc-data\responders\<instance>.pid`
+  - State: `%USERPROFILE%\.claude-ipc-data\responders\<instance>.json`
+- **Custom policies**: Extend `ResponderPolicy` class in `src/core/models/responder.py`
+
+**Adding new AI CLI integrations** (like Gemini, Codex):
+1. Create slash commands in `.claude/commands/` (for Claude Code)
+2. Add config in `docs/<ai-name>-commands/` or TOML config
+3. Test cross-CLI messaging with existing instances
+4. Document in `docs/IPC_CLI_INTEGRATION_SUMMARY.md`
 
 ## Environment Variables
 
@@ -317,10 +341,35 @@ See `docs/TROUBLESHOOTING.md` for details. Quick fixes:
 
 ## Documentation
 
+### Core Documentation
 - **README.md** - Quick start guide
 - **docs/INSTALL.md** - Installation details
-- **docs/IPC_UNIFIED_GUIDE_KO.md** - Korean comprehensive guide
-- **docs/ipc_cli_commands.md** - CLI reference
 - **docs/TROUBLESHOOTING.md** - Detailed troubleshooting
-- **docs/changes/** - Behavior change records
-- **test/** - Test suite
+- **docs/ipc_cli_commands.md** - CLI reference
+
+### Platform-Specific Guides
+- **docs/platform-guides/CLAUDE_CODE_SETUP.md** - Claude Code slash commands
+- **docs/claude-commands/INSTALL.md** - Claude Code integration (25 commands)
+- **docs/gemini-commands/INSTALL.md** - Gemini CLI integration (24 commands)
+- **docs/codex-config.toml** - Codex CLI configuration (24 commands)
+
+### Korean Documentation
+- **docs/IPC_UNIFIED_GUIDE_KO.md** - Comprehensive guide (Korean)
+- **docs/GLOBAL_USAGE_KO.md** - Global usage guide (Korean)
+
+### Development
+- **test/** - Test suite with comprehensive coverage
+- **docs/changes/** - Change records (Constitution Principle V: all behavior changes documented)
+- **.cursorrules** - Cursor IDE integration rules
+
+## Project Governance
+
+This project follows a **Constitution** (documented in `.specify/memory/constitution.md` and `docs/changes/2025-09-29-constitution-v1.0.0.md`):
+
+**Key Principle V**: Every behavior/contract-affecting change requires a separate change record in `docs/changes/` or `CHANGELOG.md` entry with version impact (PATCH/MINOR/MAJOR).
+
+When making changes:
+1. Document behavior changes in `docs/changes/YYYY-MM-DD-feature-name.md`
+2. Follow the change record template (see existing records)
+3. Note version impact and migration requirements
+4. Link change record in commit messages

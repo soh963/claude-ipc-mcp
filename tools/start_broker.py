@@ -24,14 +24,40 @@ class BrokerManager:
     def __init__(self):
         self.lock_file = Path.home() / ".claude-ipc-data" / "broker.lock"
         self.broker_script = Path(__file__).parent.parent / "src" / "claude_ipc_server.py"
-        # Allow host/port overrides via environment
-        self.broker_host = os.getenv("IPC_HOST", "127.0.0.1")
-        try:
-            self.broker_port = int(os.getenv("IPC_GLOBAL_PORT", os.getenv("IPC_PORT", "9876")))
-        except ValueError:
-            self.broker_port = 9876
+
+        # Get broker config with priority: project config → env vars → defaults
+        self.broker_host, self.broker_port = self._get_broker_config()
+
         # 데이터 디렉토리 생성
         self.lock_file.parent.mkdir(parents=True, exist_ok=True)
+
+    def _get_broker_config(self) -> tuple[str, int]:
+        """Get broker host and port from project config or environment variables."""
+        # 1. Try to read from project-local .ipc/state/project.json
+        try:
+            # Add parent directory to sys.path to import from src
+            sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+            from core.project_local import detect_project_root
+
+            project_root = detect_project_root()
+            project_json = project_root / ".ipc" / "state" / "project.json"
+
+            if project_json.exists():
+                config = json.loads(project_json.read_text(encoding="utf-8"))
+                host = config.get("broker_host", "127.0.0.1")
+                port = config.get("broker_port", 9876)
+                return host, int(port)
+        except Exception:
+            pass
+
+        # 2. Fallback to environment variables
+        host = os.getenv("IPC_HOST", "127.0.0.1")
+        try:
+            port = int(os.getenv("IPC_GLOBAL_PORT", os.getenv("IPC_PORT", "9876")))
+        except ValueError:
+            port = 9876
+
+        return host, port
 
     def is_port_listening(self) -> bool:
         """포트가 실제로 LISTENING 상태인지 확인"""
@@ -147,12 +173,14 @@ class BrokerManager:
         else:
             # Unix: nohup으로 데몬화
             try:
-                proc = subprocess.Popen(
-                    ["nohup", python_exe, broker_path],
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                    preexec_fn=os.setsid,
-                )
+                # Use os.devnull instead of subprocess.DEVNULL to prevent 'nul' file creation
+                with open(os.devnull, 'w') as devnull:
+                    proc = subprocess.Popen(
+                        ["nohup", python_exe, broker_path],
+                        stdout=devnull,
+                        stderr=devnull,
+                        preexec_fn=os.setsid,
+                    )
             except Exception as e:
                 print(f"  ❌ Failed to start broker: {e}")
                 return False
