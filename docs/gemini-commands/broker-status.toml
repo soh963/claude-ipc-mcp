@@ -2,9 +2,9 @@
 
 description = "📊 Check broker status"
 prompt = """
-Check global IPC broker status:
+Check broker status:
 
-!{uv run python %IPC_CHAT%\\tools\\ipc_global_command.py broker status}
+!{uv run python D:/claude-ipc-mcp/tools/ipc_global_command.py broker status}
 
 Shows broker running status, connection details, and active instances.
 """

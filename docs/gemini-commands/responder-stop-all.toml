@@ -2,9 +2,9 @@
 
 description = "🛑 Stop all auto-responders"
 prompt = """
-Stop all running auto-responder processes:
+Stop all auto-responders:
 
-!{uv run python %IPC_CHAT%\\tools\\ipc_global_command.py responder stop-all}
+!{uv run python D:/claude-ipc-mcp/tools/ipc_global_command.py responder stop-all}
 
 This terminates all active responder processes gracefully.
 """

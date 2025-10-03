@@ -4,13 +4,12 @@ description = "📝 Register this instance with IPC"
 prompt = """
 Register this instance with the IPC broker.
 
-What instance name would you like to use? (e.g., gemini-main, gemini-assistant)
-
-[After receiving the name, execute:]
-!{uv run python %IPC_CHAT%\\tools\\ipc_global_command.py register {instance_name}}
+!{echo "Registering instance: {args[0]}" && uv run python D:/claude-ipc-mcp/tools/ipc_global_command.py register {args[0]} && echo "✓ Successfully registered: {args[0]}" && echo "" && echo "You can now send and receive messages!"}
 
 This:
 - Connects to the broker
 - Receives a session token
 - Enables message sending/receiving
+
+Example: /ipc:register gemini-main
 """

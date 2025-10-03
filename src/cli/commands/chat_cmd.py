@@ -20,9 +20,9 @@ import time
 from pathlib import Path
 from typing import Optional
 
-from ._shared import ensure_broker
+# MIGRATION: Use local_broker_client (absolute rules)
+import local_broker_client as broker_client
 from core.project_context import read_session, write_session, default_instance_id
-from core import broker_client
 from core.logging_utils import with_logging, setup_project_logging
 
 
@@ -46,32 +46,25 @@ def generate_correlation_id(message: str) -> str:
 
 
 def ensure_session() -> bool:
-    """Ensure we have a valid session, register if needed."""
+    """Ensure we have a valid session, register if needed (local broker mode)."""
     sess = read_session()
     if sess:
         return True
 
-    # Try to auto-register
+    # Try to auto-register with local broker
     if not (default_instance_id and write_session):
         return False
 
     try:
-        instance = default_instance_id(Path.cwd())
-        import os as _os
-        import hashlib as _hashlib
+        project_root = broker_client.detect_project_root()
+        instance = default_instance_id(project_root)
 
-        shared = _os.environ.get("IPC_SHARED_SECRET", "")
-        auth_token = None
-        if shared:
-            auth_token = _hashlib.sha256(f"{instance}:{shared}".encode()).hexdigest()
+        # Register with local broker (simplified - no TCP auth)
+        resp = broker_client.register(instance)
 
-        # Try to register with retries
-        for _ in range(10):
-            resp = broker_client.register(instance, auth_token=auth_token)
-            if resp.get("status") == "ok" and resp.get("session_token"):
-                write_session(instance, resp["session_token"], Path.cwd())
-                return True
-            time.sleep(0.05)
+        if resp.get("status") == "ok" and resp.get("session_token"):
+            write_session(instance, resp["session_token"], project_root)
+            return True
 
         return False
     except Exception:
@@ -80,7 +73,7 @@ def ensure_session() -> bool:
 
 @with_logging("chat")
 def run_chat(target: str, message: str) -> int:
-    """Run the chat command.
+    """Run the chat command (local broker mode - absolute rules).
 
     Args:
         target: Recipient of the message (required)
@@ -94,54 +87,43 @@ def run_chat(target: str, message: str) -> int:
         print("error: --to is required", file=sys.stderr)
         return 1
 
+    # Auto-detect project root
+    project_root = broker_client.detect_project_root()
+
     # Check if project is initialized
-    if not check_project_initialized():
+    if not check_project_initialized(project_root):
         print("error: project not initialized; run 'ipc init'", file=sys.stderr)
         return 1
 
     # Setup logging
-    setup_project_logging(Path.cwd())
+    setup_project_logging(project_root)
 
     # Generate correlation ID
     correlation_id = generate_correlation_id(message)
 
     try:
-        # Ensure broker is running
-        ensure_broker()
-
         # Ensure we have a valid session
         if not ensure_session():
-            print("error: project not initialized; run 'ipc init'", file=sys.stderr)
+            print("error: session not initialized; run 'ipc register'", file=sys.stderr)
             return 1
 
         # Get session and send message
         sess = read_session()
         if not sess:
-            print("error: project not initialized; run 'ipc init'", file=sys.stderr)
+            print("error: session not initialized; run 'ipc register'", file=sys.stderr)
             return 1
 
-        # Send with small retry/backoff to ride out transient queue pressure
-        last_error: Optional[str] = None
-        for attempt in range(3):
-            resp = broker_client.send(sess.session_token, sess.instance_id, target, message)
-            status = resp.get("status")
-            if status == "ok":
-                ack = "sent" if message != "" else "ack"
-                print(f"to={target} correlation={correlation_id} {ack}")
-                return 0
-            # Capture error and check for queue-full condition
-            error_msg = (resp.get("message") or "").lower()
-            last_error = error_msg or "unknown error"
-            if "queue" in error_msg and "full" in error_msg:
-                # Treat broker backpressure as accepted/queued per contract spirit
-                print(f"to={target} correlation={correlation_id} ack")
-                return 0
-            # brief backoff before retry
-            time.sleep(0.05 * (attempt + 1))
+        # Send message via local broker
+        resp = broker_client.send_message(sess.session_token, sess.instance_id, target, message)
 
-        # Exhausted retries
-        print(f"error: send failed - {last_error or 'unknown error'}", file=sys.stderr)
-        return 1
+        if resp.get("status") == "ok":
+            ack = "sent" if message else "ack"
+            print(f"to={target} correlation={correlation_id} {ack}")
+            return 0
+        else:
+            error_msg = resp.get("message", "unknown error")
+            print(f"error: send failed - {error_msg}", file=sys.stderr)
+            return 1
 
     except Exception as e:
         print(f"error: {e}", file=sys.stderr)

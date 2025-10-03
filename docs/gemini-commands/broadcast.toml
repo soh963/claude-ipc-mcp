@@ -4,9 +4,9 @@ description = "📢 Broadcast message to all instances"
 prompt = """
 Broadcast a message to all registered instances.
 
-Message: {message}
+Message: {args[0]}
 
-!{uv run python %IPC_CHAT%\\tools\\ipc_global_command.py broadcast "{message}"}
+!{uv run python D:/claude-ipc-mcp/tools/ipc_global_command.py broadcast "{args[0]}"}
 
 This sends your message to:
 - All currently registered instances

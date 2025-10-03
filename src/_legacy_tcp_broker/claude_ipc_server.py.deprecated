@@ -53,6 +53,26 @@ def _get_broker_config() -> tuple[str, int]:
     return host, port
 
 
+# Load secrets from .ipc/secret/secrets.env if not in environment
+if not os.environ.get("IPC_SHARED_SECRET"):
+    try:
+        from core.project_local import detect_project_root
+        project_root = detect_project_root()
+        secrets_file = project_root / ".ipc" / "secret" / "secrets.env"
+        if secrets_file.exists():
+            with open(secrets_file) as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith('#') and '=' in line:
+                        key, value = line.split('=', 1)
+                        if key.strip() == "IPC_SHARED_SECRET":
+                            os.environ[key.strip()] = value.strip()
+                            print(f"[BROKER] Loaded IPC_SHARED_SECRET from {secrets_file}")
+                            break
+    except Exception as e:
+        print(f"[BROKER] Failed to load secrets: {e}")
+        pass
+
 # Configuration with priority: project config → env vars → defaults
 IPC_HOST, IPC_PORT = _get_broker_config()
 HEARTBEAT_INTERVAL = 30  # seconds
@@ -122,7 +142,10 @@ class MessageBroker:
         self.rate_limiter = RateLimiter(max_requests=100, window_seconds=60)
 
         # SQLite persistence - secure location
-        self.db_dir = os.path.expanduser("~/.claude-ipc-data")
+        # Use project-local .ipc directory instead of global
+        from core.project_local import get_project_ipc_dir
+        self.ipc_dir = get_project_ipc_dir()
+        self.db_dir = self.ipc_dir / "state"
         self.db_path = os.path.join(self.db_dir, "messages.db")
         self._init_database()
         self._load_from_database()
@@ -131,7 +154,7 @@ class MessageBroker:
         """Initialize SQLite database with required tables"""
         try:
             # Create secure directory if it doesn't exist
-            os.makedirs(self.db_dir, 0o700, exist_ok=True)
+            os.makedirs(self.db_dir, mode=0o700, exist_ok=True)
 
             # Create database connection
             conn = sqlite3.connect(self.db_path)
@@ -1239,6 +1262,32 @@ async def list_tools() -> List[Tool]:
                 "required": ["instance_id"],
             },
         ),
+        Tool(
+            name="respond_to_message",
+            description="Send an AI-generated response to a specific message from another instance",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "from_id": {"type": "string", "description": "Your instance ID"},
+                    "to_id": {"type": "string", "description": "Instance ID to respond to"},
+                    "response_content": {"type": "string", "description": "Your AI-generated response"},
+                    "original_message": {"type": "string", "description": "The original message you're responding to (for context)"},
+                },
+                "required": ["from_id", "to_id", "response_content"],
+            },
+        ),
+        Tool(
+            name="check_response_status",
+            description="Check if a sent message has been responded to by tracking correlation tokens",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "instance_id": {"type": "string", "description": "Your instance ID"},
+                    "correlation_token": {"type": "string", "description": "The correlation token from your sent message (e.g., 'corr-12345')"},
+                },
+                "required": ["instance_id", "correlation_token"],
+            },
+        ),
     ]
 
 
@@ -1273,7 +1322,14 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
         if not current_session_token:
             return [TextContent(type="text", text="Error: Not registered. Please register first.")]
 
-        message = {"content": arguments["content"], "data": arguments.get("data", {})}
+        # Generate correlation token
+        import random
+        correlation_token = f"corr-{random.randint(10000, 99999)}"
+
+        # Add correlation token to message content
+        content_with_corr = f"{arguments['content']} [{correlation_token}]"
+
+        message = {"content": content_with_corr, "data": arguments.get("data", {})}
         response = BrokerClient.send_request(
             {
                 "action": "send",
@@ -1283,7 +1339,17 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
                 "session_token": current_session_token,
             }
         )
-        return [TextContent(type="text", text=json.dumps(response, indent=2))]
+
+        # Add correlation token to response for tracking
+        if response.get("status") == "ok":
+            result = f"✅ Message sent successfully!\n\n"
+            result += f"**To**: {arguments['to_id']}\n"
+            result += f"**Correlation Token**: {correlation_token}\n\n"
+            result += f"💡 **Track response status** with:\n"
+            result += f"`check_response_status` tool using correlation_token: {correlation_token}"
+            return [TextContent(type="text", text=result)]
+        else:
+            return [TextContent(type="text", text=json.dumps(response, indent=2))]
 
     elif name == "broadcast":
         if not current_session_token:
@@ -1313,13 +1379,28 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
         )
 
         if response["status"] == "ok" and response.get("messages"):
-            formatted = "New messages:\n"
-            for msg in response["messages"]:
-                formatted += f"\nFrom: {msg['from']}\n"
-                formatted += f"Time: {msg['timestamp']}\n"
-                formatted += f"Content: {msg['message']['content']}\n"
-                if msg["message"].get("data"):
-                    formatted += f"Data: {json.dumps(msg['message']['data'], indent=2)}\n"
+            formatted = "📬 **New IPC Messages** - Please respond with your AI analysis:\n\n"
+            for idx, msg in enumerate(response["messages"], 1):
+                sender = msg['from']
+                content = msg['message']['content']
+                timestamp = msg['timestamp']
+                data = msg["message"].get("data", {})
+
+                formatted += f"**Message {idx}:**\n"
+                formatted += f"  From: `{sender}`\n"
+                formatted += f"  Time: {timestamp}\n"
+                formatted += f"  Content: {content}\n"
+
+                if data:
+                    formatted += f"  Data: {json.dumps(data, indent=2)}\n"
+
+                formatted += f"\n  💡 **To respond**: Use the `respond_to_message` tool with:\n"
+                formatted += f"     - from_id: \"{arguments['instance_id']}\"\n"
+                formatted += f"     - to_id: \"{sender}\"\n"
+                formatted += f"     - response_content: <your AI analysis>\n"
+                formatted += f"     - original_message: \"{content[:50]}...\"\n\n"
+                formatted += "-" * 60 + "\n\n"
+
             return [TextContent(type="text", text=formatted)]
         else:
             return [TextContent(type="text", text="No new messages")]
@@ -1507,6 +1588,84 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
         summary += "\n".join(f"  {i+1}. {p}" for i, p in enumerate(processed))
 
         return [TextContent(type="text", text=summary)]
+
+    elif name == "respond_to_message":
+        if not current_session_token:
+            return [TextContent(type="text", text="Error: Not registered. Please register first.")]
+
+        # Send AI-generated response
+        message = {
+            "content": arguments["response_content"],
+            "data": {
+                "type": "ai_response",
+                "original_message": arguments.get("original_message", ""),
+                "ai_generated": True,
+                "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S")
+            }
+        }
+
+        response = BrokerClient.send_request(
+            {
+                "action": "send",
+                "from_id": arguments["from_id"],
+                "to_id": arguments["to_id"],
+                "message": message,
+                "session_token": current_session_token,
+            }
+        )
+
+        if response.get("status") == "ok":
+            return [TextContent(type="text", text=f"✅ AI response sent to {arguments['to_id']}\n\nYour response: {arguments['response_content'][:100]}...")]
+        else:
+            return [TextContent(type="text", text=f"❌ Error sending response: {response.get('message')}")]
+
+    elif name == "check_response_status":
+        if not current_session_token:
+            return [TextContent(type="text", text="Error: Not registered. Please register first.")]
+
+        correlation_token = arguments["correlation_token"]
+        instance_id = arguments["instance_id"]
+
+        # Check for messages containing this correlation token
+        check_response = BrokerClient.send_request(
+            {
+                "action": "check",
+                "instance_id": instance_id,
+                "session_token": current_session_token,
+            }
+        )
+
+        if check_response.get("status") != "ok":
+            return [TextContent(type="text", text=f"❌ Error checking messages: {check_response.get('message')}")]
+
+        messages = check_response.get("messages", [])
+
+        # Look for response with matching correlation token
+        response_found = None
+        for msg in messages:
+            content = msg.get("message", {}).get("content", "")
+            if f"[{correlation_token}]" in content:
+                response_found = msg
+                break
+
+        if response_found:
+            sender = response_found.get("from", "unknown")
+            content = response_found.get("message", {}).get("content", "")
+            timestamp = response_found.get("timestamp", "")
+            data = response_found.get("message", {}).get("data", {})
+
+            result = f"✅ **Response Received!**\n\n"
+            result += f"**From**: {sender}\n"
+            result += f"**Time**: {timestamp}\n"
+            result += f"**Correlation**: {correlation_token}\n\n"
+            result += f"**Response Content**:\n{content}\n"
+
+            if data.get("ai_generated"):
+                result += f"\n💡 This was an AI-generated response\n"
+
+            return [TextContent(type="text", text=result)]
+        else:
+            return [TextContent(type="text", text=f"⏳ **No response yet** for correlation token: {correlation_token}\n\nThe recipient may still be processing your message.")]
 
     return [TextContent(type="text", text=f"Unknown tool: {name}")]
 

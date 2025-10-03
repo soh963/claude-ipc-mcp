@@ -4,11 +4,11 @@ description = "💬 Send message and wait for response"
 prompt = """
 Send a message to another instance and wait for their response.
 
-Target instance: {target}
-Message: {message}
-Timeout (seconds, default 30): {timeout}
+Target instance: {args[0]}
+Message: {args[1]}
+Timeout (seconds, default 30): {args[2]:-30}
 
-!{uv run python %IPC_CHAT%\\tools\\ipc_global_command.py ask --to {target} "{message}" --timeout {timeout}}
+!{uv run python D:/claude-ipc-mcp/tools/ipc_global_command.py ask --to {args[0]} '{args[1]}' --timeout {args[2]:-30}}
 
 This:
 - Sends message to target instance

@@ -37,11 +37,39 @@ uv run python tools/ipc_global_command.py responder status gemini
 # Natural language (MCP tools - after MCP installation)
 Register this instance as myname
 Send message to alice: Can you help?
-Check messages
+Check messages                                    # Shows AI response instructions
 List instances
+
+# Real AI Response System (NEW - see docs/AI_RESPONSE_GUIDE.md)
+# - Enhanced 'Check messages' shows how to respond with real AI
+# - Use 'respond_to_message' tool for intelligent responses
+# - NO auto-responder bots - real Claude Code AI only
 ```
 
 ## Architecture Overview
+
+### Broker Modes
+
+The system supports two broker architectures:
+
+**Global TCP Broker** (Default, Recommended):
+- Single broker instance serving all projects
+- TCP socket on 127.0.0.1:9876 (configurable via IPC_GLOBAL_PORT)
+- Cross-project and cross-platform messaging
+- Managed by `src/broker/service_manager.py` with auto-start capability
+- Database: `~/.claude-ipc-data/messages.db` (global)
+- Session persistence: `.ipc/state/session.json` (per-project)
+
+**Local Broker** (Experimental):
+- Per-project isolated broker
+- Unix domain sockets (Linux/Mac) or Named Pipes (Windows: `\\.\pipe\ipc_<project>`)
+- Database: `.ipc/state/messages.db` (per-project)
+- No TCP ports, complete project isolation
+- Requires manual management via `src/local_broker.py`
+
+**When to use which**:
+- Global TCP: Multi-project collaboration, cross-session messaging, production use
+- Local Broker: Strict project isolation, development/testing, no shared state needed
 
 ### Core Components
 
@@ -53,17 +81,26 @@ List instances
    - Automatic name forwarding for renamed instances
    - Large message file storage (>10KB threshold)
 
-2. **Broker Client** (`src/core/broker_client.py`)
-   - Socket communication wrapper
-   - Auto-start broker detection
+2. **Service Manager** (`src/broker/service_manager.py`)
+   - Automatic broker startup and health monitoring
+   - PID file management (`.ipc/state/broker.pid`)
+   - Graceful shutdown handling
+   - Platform-specific daemon spawning (CREATE_NO_WINDOW on Windows, setsid on Unix)
+   - Connection health checks and retry logic
+
+3. **Broker Client** (`src/core/broker_client.py`)
+   - Socket communication wrapper with auto-reconnect
+   - Auto-start broker detection via ServiceManager
    - Environment-based configuration (IPC_HOST, IPC_GLOBAL_PORT)
+   - Session token management and persistence
 
-3. **Project Context System** (`src/core/project_context.py`)
-   - Per-project `.ipc/` directory structure
-   - Session state persistence
-   - Project isolation support
+4. **Project Context System** (`src/core/project_context.py`)
+   - Per-project `.ipc/` directory structure (config, logs, state, secret subdirs)
+   - Session state persistence in `.ipc/state/session.json`
+   - Project isolation while sharing global broker
+   - Automatic `.ipc/` structure initialization
 
-4. **CLI Entry Point** (`tools/ipc_global_command.py`)
+5. **CLI Entry Point** (`tools/ipc_global_command.py`)
    - Unified command interface for all operations
    - Commands: init, status, ping, ask, responder, messages, instances
    - Global PATH integration via `scripts/ipc.bat`
@@ -72,12 +109,17 @@ List instances
 
 ```
 src/
-├── claude_ipc_server.py          # MCP server & broker
+├── claude_ipc_server.py          # MCP server & TCP broker
+├── local_broker.py               # Local Unix socket/Named Pipe broker (experimental)
+├── broker/
+│   ├── service_manager.py        # Broker lifecycle & auto-start
+│   └── daemon.py                 # Broker daemon process
 ├── core/
 │   ├── broker_client.py          # Client communication
 │   ├── broker.py                 # Broker implementation
 │   ├── async_broker.py           # Async broker variant
 │   ├── project_context.py        # Project isolation
+│   ├── project_local.py          # Local .ipc/ path resolution
 │   ├── router.py                 # Message routing
 │   ├── security.py               # Auth & validation
 │   ├── retry.py                  # Retry logic
@@ -98,11 +140,27 @@ src/
 │       └── doctor_cmd.py
 tools/
 ├── ipc_global_command.py         # Main CLI entry point
-├── start_broker.py               # Legacy broker launcher
+├── start_broker.py               # Manual broker launcher
 ├── auto_responder.py             # Auto-reply daemon
 ├── chat_once.py                  # Single message sender
 ├── nl_auto_chat.py               # Natural language chat
 └── [various utility scripts]
+
+.ipc/                              # Per-project state (auto-created)
+├── config/                        # Project config
+├── logs/                          # Broker & responder logs
+├── state/
+│   ├── session.json              # Session token persistence
+│   ├── broker.pid                # Broker PID file
+│   └── messages.db               # Local broker only
+└── secret/                        # Sensitive data
+
+~/.claude-ipc-data/                # Global shared state
+├── messages.db                    # Global broker messages
+├── large-messages/                # Files >10KB
+└── responders/                    # Auto-responder state
+    ├── <instance>.pid
+    └── <instance>.json
 ```
 
 ### Key Design Patterns
@@ -111,20 +169,32 @@ tools/
 - Each project gets `.ipc/` directory with config, logs, state, secret subdirectories
 - Project-specific instance IDs and session management
 - Global broker serves all projects via TCP
+- Session tokens persisted in `.ipc/state/session.json` for auto-reconnect
+- Independent `.ipc/` structures enable multi-project workflows
+
+**Auto-Start Mechanism**:
+- `ServiceManager` automatically starts broker on first use
+- Health checks via connection test + status request validation
+- PID file tracking in `.ipc/state/broker.pid` prevents duplicate instances
+- Platform-specific daemon spawning (Windows: CREATE_NO_WINDOW, Unix: setsid)
+- Timeout-based startup verification (default 30s)
 
 **Message Flow**:
 1. Client calls `broker_client.register(instance_id)` → receives session_token
-2. Client calls `broker_client.send(session_token, from_id, to_id, content)`
-3. Broker validates session, queues message in SQLite
-4. Recipient calls `broker_client.check(session_token)` → retrieves messages
-5. Messages marked as read after retrieval
+2. Session token saved to `.ipc/state/session.json` for persistence
+3. Client calls `broker_client.send(session_token, from_id, to_id, content)`
+4. Broker validates session, queues message in SQLite
+5. Recipient calls `broker_client.check(session_token)` → retrieves messages
+6. Messages marked as read after retrieval
+7. Large messages (>10KB) stored as files in `~/.claude-ipc-data/large-messages/`
 
 **Security Model**:
 - Optional shared secret authentication (IPC_SHARED_SECRET env var)
 - Session tokens (32-byte random, SHA-256 hashed in DB)
 - Instance ID validation (1-32 alphanumeric, dash, underscore)
-- Rate limiting per instance
+- Rate limiting per instance (100 req/min)
 - Secure file permissions (0o700 dirs, 0o600 files)
+- Token persistence enables secure reconnection without re-authentication
 
 ## Development Workflows
 
@@ -172,15 +242,28 @@ python tools/reset_all_ipc.py              # WARNING: Deletes all messages
 **Broker issues**:
 ```powershell
 uv run python tools/ipc_global_command.py status    # Check status
-uv run python tools/start_broker.py                 # Manual start
-# Logs: .ipc/logs/ or console output
+uv run python tools/ipc_doctor.py                   # Comprehensive diagnostics
+uv run python tools/start_broker.py                 # Manual start if auto-start fails
+
+# Check logs
+cat .ipc/logs/broker.log                            # Broker logs (per-project)
+cat .ipc/logs/responder_<instance>.log              # Auto-responder logs
+
+# Check PID files
+cat .ipc/state/broker.pid                           # Broker process ID
+cat ~/.claude-ipc-data/responders/<instance>.pid    # Responder process ID
+
+# Session info
+cat .ipc/state/session.json                         # Current session token
 ```
 
 **Common fixes**:
 - Port conflict → Set `IPC_GLOBAL_PORT` env var
-- Database locked → Stop clients, restart broker
-- Session expired → Re-register instance
+- Database locked → Stop clients (`uv run python tools/ipc_global_command.py responder stop <instance>`), restart broker
+- Session expired → Re-register instance (session.json will update)
 - Messages not delivered → Check recipient registered and broker running
+- Auto-start fails → Check `.ipc/state/broker.pid` for stale PID, remove if process not running
+- Responder not responding → Check PID file in `~/.claude-ipc-data/responders/`, verify process exists
 
 ### Extending the System
 
@@ -189,7 +272,7 @@ uv run python tools/start_broker.py                 # Manual start
 2. Register in `tools/ipc_global_command.py` (see existing commands for pattern)
 3. Update `docs/ipc_cli_commands.md`
 4. Add tests in `test/test_your_command.py`
-5. Document change in `docs/changes/` if it affects behavior
+5. **Document change in `docs/changes/`** if it affects behavior (see Constitution section below)
 
 **Auto-responder development**:
 - **Policies**:
@@ -318,14 +401,20 @@ uv run python tools/ipc_global_command.py responder stop gemini
 
 ## Key Operational Notes
 
-- **Broker requirement**: Must be running before any IPC operations
-- **Session expiry**: 24 hours (stored in `~/.claude-ipc-data/`)
+- **Auto-start**: Broker auto-starts on first use via `ServiceManager` - no manual intervention needed
+- **Broker requirement**: Must be running before any IPC operations (auto-started unless explicitly disabled)
+- **Session expiry**: 24 hours (stored in `.ipc/state/session.json`)
+- **Session persistence**: Tokens persist across restarts, enabling seamless reconnection
 - **Databases**:
-  - Global: `~/.claude-ipc-data/messages.db`
-  - Per-project: `.ipc/state/messages.db`
+  - Global broker: `~/.claude-ipc-data/messages.db`
+  - Local broker: `.ipc/state/messages.db` (per-project)
 - **Large messages**: >10KB stored as files in `~/.claude-ipc-data/large-messages/`
-- **Platform**: Windows - use PowerShell (batch files in `scripts/`)
+- **Platform differences**:
+  - Windows: Named Pipes (`\\.\pipe\ipc_<project>`), CREATE_NO_WINDOW daemon spawning
+  - Unix/Linux: Unix domain sockets, setsid for daemon processes
+  - PowerShell recommended for Windows (batch files in `scripts/`)
 - **Project isolation**: Each project has `.ipc/` directory, shares global broker
+- **PID tracking**: Broker PID in `.ipc/state/broker.pid`, responders in `~/.claude-ipc-data/responders/<instance>.pid`
 
 ## Troubleshooting
 
@@ -366,10 +455,43 @@ See `docs/TROUBLESHOOTING.md` for details. Quick fixes:
 
 This project follows a **Constitution** (documented in `.specify/memory/constitution.md` and `docs/changes/2025-09-29-constitution-v1.0.0.md`):
 
-**Key Principle V**: Every behavior/contract-affecting change requires a separate change record in `docs/changes/` or `CHANGELOG.md` entry with version impact (PATCH/MINOR/MAJOR).
+**Key Principle V - Change Documentation**: Every behavior/contract-affecting change requires documentation.
 
-When making changes:
-1. Document behavior changes in `docs/changes/YYYY-MM-DD-feature-name.md`
-2. Follow the change record template (see existing records)
-3. Note version impact and migration requirements
+**When to create a change record in `docs/changes/`**:
+- ✅ API changes (new parameters, changed return values, removed functions)
+- ✅ Behavior changes (different output format, changed validation rules)
+- ✅ Breaking changes (incompatible with previous version)
+- ✅ New features affecting user contracts (new commands, tools, flags)
+- ✅ Database schema changes
+- ✅ Configuration file format changes
+- ❌ Internal refactoring (no external behavior change)
+- ❌ Bug fixes that restore documented behavior
+- ❌ Documentation updates only
+- ❌ Test additions without behavior change
+
+**Change record template**:
+```markdown
+# [Feature/Fix Name] - YYYY-MM-DD
+
+## Version Impact
+PATCH / MINOR / MAJOR
+
+## Change Type
+Feature / Bugfix / Breaking Change / Improvement
+
+## Description
+[What changed and why]
+
+## Migration Required
+[If applicable, how users should adapt]
+
+## Testing
+[How to verify the change]
+```
+
+**Process**:
+1. Create change record in `docs/changes/YYYY-MM-DD-feature-name.md`
+2. Note version impact (PATCH/MINOR/MAJOR)
+3. Document migration requirements if breaking
 4. Link change record in commit messages
+5. See existing records in `docs/changes/` for examples

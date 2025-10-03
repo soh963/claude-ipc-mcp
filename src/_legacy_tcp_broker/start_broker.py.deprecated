@@ -155,6 +155,23 @@ class BrokerManager:
         print(f"  Script: {broker_path}")
         print(f"  Host: {self.broker_host}  Port: {self.broker_port}")
 
+        # Load secrets from .ipc/secret/secrets.env
+        env = os.environ.copy()
+        try:
+            sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+            from core.project_local import detect_project_root
+            project_root = detect_project_root()
+            secrets_file = project_root / ".ipc" / "secret" / "secrets.env"
+            if secrets_file.exists():
+                with open(secrets_file) as f:
+                    for line in f:
+                        line = line.strip()
+                        if line and not line.startswith('#') and '=' in line:
+                            key, value = line.split('=', 1)
+                            env[key.strip()] = value.strip()
+        except Exception:
+            pass
+
         # 브로커 시작
         if sys.platform == "win32":
             # Windows: CREATE_NEW_CONSOLE로 독립 프로세스 생성
@@ -164,6 +181,7 @@ class BrokerManager:
                 startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
                 proc = subprocess.Popen(
                     [python_exe, broker_path],
+                    env=env,
                     startupinfo=startupinfo,
                     creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
                 )
@@ -177,6 +195,7 @@ class BrokerManager:
                 with open(os.devnull, 'w') as devnull:
                     proc = subprocess.Popen(
                         ["nohup", python_exe, broker_path],
+                        env=env,
                         stdout=devnull,
                         stderr=devnull,
                         preexec_fn=os.setsid,

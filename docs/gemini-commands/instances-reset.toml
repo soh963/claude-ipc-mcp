@@ -2,9 +2,11 @@
 
 description = "🔄 Reset all instances"
 prompt = """
-⚠️ WARNING: This will delete ALL instance registrations!
+Reset all instances:
 
-!{uv run python %IPC_CHAT%\\tools\\ipc_global_command.py instances reset}
+!{uv run python D:/claude-ipc-mcp/tools/ipc_global_command.py instances reset}
+
+⚠️ WARNING: This will delete ALL instance registrations!
 
 This removes all instances from the broker. Messages are preserved.
 """

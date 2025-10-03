@@ -1,0 +1,14 @@
+# IPC Command for Gemini CLI
+
+description = "🔧 Fix all project configurations"
+prompt = """
+Fix all IPC project configurations:
+
+!{uv run python D:/claude-ipc-mcp/tools/ipc_global_command.py fix}
+
+This:
+- Repairs .ipc directory structure
+- Updates configuration files
+- Fixes broker connections
+- Resolves common issues
+"""

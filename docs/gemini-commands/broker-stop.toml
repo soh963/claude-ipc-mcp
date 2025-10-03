@@ -2,9 +2,9 @@
 
 description = "🛑 Stop global IPC broker"
 prompt = """
-Stop the global IPC message broker:
+Stop global IPC broker:
 
-!{uv run python %IPC_CHAT%\\tools\\ipc_global_command.py broker stop}
+!{uv run python D:/claude-ipc-mcp/tools/ipc_global_command.py broker stop}
 
 This gracefully shuts down the broker while preserving messages.
 """

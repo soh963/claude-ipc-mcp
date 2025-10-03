@@ -2,9 +2,11 @@
 
 description = "🗑️ Clear all messages"
 prompt = """
-⚠️ WARNING: This will delete ALL messages permanently!
+Clear all messages:
 
-!{uv run python %IPC_CHAT%\\tools\\ipc_global_command.py messages clear --force}
+!{uv run python D:/claude-ipc-mcp/tools/ipc_global_command.py messages clear --force}
+
+⚠️ WARNING: This will delete ALL messages permanently!
 
 This removes all messages from the database. Cannot be undone.
 """

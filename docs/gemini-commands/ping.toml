@@ -2,9 +2,9 @@
 
 description = "🔔 Test broker connectivity"
 prompt = """
-Test connection to the IPC broker:
+Test broker connectivity:
 
-!{uv run python %IPC_CHAT%\\tools\\ipc_global_command.py ping}
+!{uv run python D:/claude-ipc-mcp/tools/ipc_global_command.py ping}
 
 This verifies:
 - Broker is running

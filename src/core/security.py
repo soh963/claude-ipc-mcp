@@ -33,7 +33,8 @@ class SecurityConfig:
     token_expiry: int = 3600  # 1 hour
     tls_cert_path: Path = None
     tls_key_path: Path = None
-    audit_log_path: Path = Path.home() / ".claude-ipc-data" / "audit.log"
+    # Use project-local .ipc directory
+    audit_log_path: Path = Path(".ipc") / "logs" / "audit.log"
 
 
 @dataclass
@@ -105,8 +106,11 @@ class TLSManager:
     """Mutual TLS authentication manager"""
 
     def __init__(self, cert_path: Path = None, key_path: Path = None):
-        self.cert_path = cert_path or Path.home() / ".claude-ipc-data" / "certs" / "server.crt"
-        self.key_path = key_path or Path.home() / ".claude-ipc-data" / "certs" / "server.key"
+        # Use project-local .ipc directory
+        from core.project_local import get_project_ipc_dir
+        ipc_dir = get_project_ipc_dir()
+        self.cert_path = cert_path or ipc_dir / "secret" / "server.crt"
+        self.key_path = key_path or ipc_dir / "secret" / "server.key"
         self._ensure_certificates()
 
     def _ensure_certificates(self):
@@ -259,7 +263,9 @@ class AuditLogger:
     """Security audit logging"""
 
     def __init__(self, log_path: Path = None):
-        self.log_path = log_path or Path.home() / ".claude-ipc-data" / "audit.log"
+        # Use project-local .ipc directory
+        from core.project_local import get_project_ipc_dir
+        self.log_path = log_path or get_project_ipc_dir() / "logs" / "audit.log"
         self.log_path.parent.mkdir(parents=True, exist_ok=True)
 
     def log_event(self, event_type: str, user: str, details: Dict):

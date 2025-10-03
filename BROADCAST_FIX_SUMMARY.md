@@ -1,4 +1,42 @@
-# 브로드캐스트 자동응답 문제 해결 요약
+# Broker Singleton Enforcement - Implementation Summary
+
+**날짜**: 2025-10-02
+**이슈**: Multiple broker processes causing state inconsistency
+
+## 🎯 User Requirements
+
+### Core Architecture Rules
+
+1. **브로커 싱글톤 (Broker Singleton)**
+   - 시스템에 **무조건 1개의 브로커만 실행**
+   - 다시 시작 시: **기존 브로커 중지 → 새 브로커 시작**
+   - **포트 9876 고정** (다른 포트 사용 불가)
+
+2. **완전 정리 절차 (Complete Cleanup Procedure)**
+   ```
+   1. ipc responder stop-all        # 모든 자동응답기 중지
+   2. ipc instances reset --all     # DB에서 인스턴스 삭제
+   3. ipc broker stop               # 브로커 중지
+   4. 중복 프로세스 확인 및 종료      # netstat + kill
+   5. ipc broker start              # 깨끗한 브로커 시작
+   ```
+
+3. **프로젝트-로컬 스토리지 (Project-Local Storage)**
+   - `ipc init`으로 프로젝트 폴더에 `.ipc/` 생성
+   - **모든 데이터**를 프로젝트 폴더에 저장:
+     - project_id
+     - instances
+     - messages
+     - auto-responders
+     - chat history
+
+4. **연쇄 종속성 (Cascading Dependencies)**
+   - **인스턴스 중지/삭제** → 관련 메시지 삭제 + 자동응답기 중지
+   - **브로커 중지** → 자동응답기 삭제 + 캐시 삭제 + DB 삭제
+
+---
+
+# 브로드캐스트 자동응답 문제 해결 요약 (이전 작업)
 
 **날짜**: 2025-10-01
 **이슈**: Auto-responder가 브로드캐스트 메시지에 응답하지 않음

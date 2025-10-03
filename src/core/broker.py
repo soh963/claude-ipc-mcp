@@ -22,13 +22,13 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class BrokerConfig:
-    """Configuration for message broker"""
+    """Configuration for message broker - PROJECT LOCAL ONLY"""
 
     port: int = 9876
     host: str = "127.0.0.1"
     max_connections: int = 100
     message_timeout: int = 30
-    db_path: Path = field(default_factory=lambda: Path.home() / ".claude-ipc-data" / "broker.db")
+    db_path: Path = field(default_factory=lambda: Path(".ipc") / "state" / "messages.db")
     enable_security: bool = True
     enable_metrics: bool = True
 
@@ -274,30 +274,49 @@ class MessageBroker:
                     logger.error(f"Error accepting connection: {e}")
 
     def _handle_client(self, client: socket.socket, addr: tuple):
-        """Handle client connection"""
+        """Handle client connection with improved error handling"""
         try:
             data = client.recv(4096)
-            if data:
-                request = json.loads(data.decode())
+            if not data:
+                logger.warning(f"Empty data received from {addr}")
+                return
 
-                # Security hook (if set by Gemini)
-                if self.security_hook and self.config.enable_security:
-                    if not self.security_hook(request, addr):
-                        response = {"status": "error", "message": "Security validation failed"}
-                        client.send(json.dumps(response).encode())
-                        return
+            # Decode with error handling
+            try:
+                decoded_data = data.decode('utf-8')
+            except UnicodeDecodeError as e:
+                logger.error(f"Unicode decode error from {addr}: {e}")
+                error_response = {"status": "error", "message": "Invalid UTF-8 encoding"}
+                client.send(json.dumps(error_response).encode())
+                return
 
-                # Process request
-                response = self._process_request(request)
+            # Parse JSON with error handling
+            try:
+                request = json.loads(decoded_data)
+            except json.JSONDecodeError as e:
+                logger.error(f"JSON decode error from {addr}: {e}, data: {decoded_data[:100]}")
+                error_response = {"status": "error", "message": f"Invalid JSON format: {str(e)}"}
+                client.send(json.dumps(error_response).encode())
+                return
 
-                # Metrics hook (if set)
-                if self.metrics_hook and self.config.enable_metrics:
-                    self.metrics_hook(request, response)
+            # Security hook (if set by Gemini)
+            if self.security_hook and self.config.enable_security:
+                if not self.security_hook(request, addr):
+                    response = {"status": "error", "message": "Security validation failed"}
+                    client.send(json.dumps(response).encode())
+                    return
 
-                client.send(json.dumps(response).encode())
+            # Process request
+            response = self._process_request(request)
+
+            # Metrics hook (if set)
+            if self.metrics_hook and self.config.enable_metrics:
+                self.metrics_hook(request, response)
+
+            client.send(json.dumps(response).encode())
 
         except Exception as e:
-            logger.error(f"Error handling client: {e}")
+            logger.error(f"Error handling client {addr}: {e}", exc_info=True)
             error_response = {"status": "error", "message": str(e)}
             try:
                 client.send(json.dumps(error_response).encode())

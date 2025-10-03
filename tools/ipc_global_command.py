@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import os
 from pathlib import Path
 import time
 
@@ -11,6 +12,8 @@ import time
 SRC_PATH = str(Path(__file__).resolve().parents[1] / "src")
 if SRC_PATH not in sys.path:
     sys.path.insert(0, SRC_PATH)
+
+# Note: IPC_SHARED_SECRET will be loaded after imports when get_project_ipc_dir() is available
 
 # Prefer core modules if available
 try:
@@ -21,7 +24,9 @@ try:
         default_instance_id,
         state_file,
     )
-    from core import broker_client
+    # MIGRATION: Use local_broker_client instead of broker_client (absolute rules)
+    import local_broker_client as broker_client
+    from core.project_local import get_project_ipc_dir
 
     _core_available = True
 except Exception:
@@ -31,36 +36,47 @@ except Exception:
     default_instance_id = None
     state_file = None
     broker_client = None
+    get_project_ipc_dir = None
     _core_available = False
+
+# Load IPC_SHARED_SECRET from .ipc/secret/secrets.env
+# ALWAYS load from file to ensure consistency with broker
+# (Environment variable might have stale/placeholder value from shell)
+if _core_available:
+    try:
+        secrets_file = get_project_ipc_dir() / "secret" / "secrets.env"
+
+        if secrets_file.exists():
+            with open(secrets_file, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith('#') and '=' in line:
+                        key, value = line.split('=', 1)
+                        if key.strip() == "IPC_SHARED_SECRET":
+                            os.environ[key.strip()] = value.strip()
+                            break
+    except Exception:
+        # Silently fail - auth will be None which is OK if broker doesn't require it
+        pass
 
 
 def ensure_broker() -> None:
-    """Ensure the TCP broker is running; if not, start it in-process and wait briefly."""
+    """Ensure local broker is running in .ipc/broker/ directory (absolute rules compliance)."""
     if not _core_available:
         return
-    try:
-        resp = broker_client.status()
-        if resp.get("status") == "ok":
-            return
-    except Exception:
-        pass
-    # Start embedded broker via claude_ipc_server import
-    try:
-        import importlib
-        import time
 
-        importlib.import_module("claude_ipc_server")
-        # Wait until broker responds OK (up to ~1s)
-        for _ in range(20):
-            try:
-                r = broker_client.status()
-                if r.get("status") == "ok":
-                    break
-            except Exception:
-                pass
-            time.sleep(0.05)
-    except Exception:
-        pass
+    # Auto-start local broker following absolute rules
+    # Broker MUST run in .ipc/broker/ with Unix socket or Named Pipe
+    project_root = broker_client.detect_project_root()
+
+    # Ensure .ipc structure exists
+    broker_client.ensure_ipc_structure(project_root)
+
+    # Start local broker if not running
+    if not broker_client.is_broker_running(project_root):
+        success = broker_client.start_local_broker(project_root)
+        if not success:
+            print("Warning: Failed to start local broker", file=sys.stderr)
 
 
 def ensure_ipc_layout(project_dir: Path) -> dict:
@@ -566,8 +582,10 @@ Documentation: docs/IPC_UNIFIED_GUIDE_KO.md
             # Stop by reading PID from lock file and terminating
             try:
                 from pathlib import Path as _Path
+                from core.project_local import get_project_ipc_dir
                 import os as _os, subprocess as _sp, signal as _signal, platform as _pf
-                lock = _Path.home() / ".claude-ipc-data" / "broker.lock"
+                # Use project-local lock file instead of global
+                lock = get_project_ipc_dir() / "state" / "broker.lock"
                 if not lock.exists():
                     print("broker not running (no lock)")
                     return 0
@@ -623,8 +641,10 @@ Documentation: docs/IPC_UNIFIED_GUIDE_KO.md
             # List messages from broker
             import sqlite3 as _sqlite3
             from pathlib import Path as _Path
+            from core.project_local import get_project_ipc_dir
 
-            db_path = _Path.home() / ".claude-ipc-data" / "messages.db"
+            # Use project-local database instead of global
+            db_path = get_project_ipc_dir() / "state" / "messages.db"
             if not db_path.exists():
                 print("No messages found (database doesn't exist)")
                 return 0
@@ -661,8 +681,15 @@ Documentation: docs/IPC_UNIFIED_GUIDE_KO.md
                 print(f"\n📬 Messages ({len(rows)} shown):\n")
                 for timestamp, from_id, to_id, content in rows:
                     print(f"  [{timestamp}] {from_id} → {to_id}")
-                    print(f"    {content}")
-                    print()
+                    # Handle multiline content with proper indentation
+                    content_str = str(content) if content else ""
+                    if '\n' in content_str:
+                        lines = content_str.split('\n')
+                        for line in lines:
+                            print(f"    {line}")
+                    else:
+                        print(f"    {content_str}")
+                    print()  # Empty line between messages
 
                 return 0
             except Exception as e:
@@ -685,8 +712,10 @@ Documentation: docs/IPC_UNIFIED_GUIDE_KO.md
             # Connect to broker DB and delete rows
             import sqlite3 as _sqlite3
             from pathlib import Path as _Path
+            from core.project_local import get_project_ipc_dir
 
-            db_path = _Path.home() / ".claude-ipc-data" / "messages.db"
+            # Use project-local database instead of global
+            db_path = get_project_ipc_dir() / "state" / "messages.db"
 
             if clear_all:
                 # Delete ALL messages from broker
@@ -763,8 +792,10 @@ Documentation: docs/IPC_UNIFIED_GUIDE_KO.md
         if ns.subcmd == "reset":
             import sqlite3 as _sqlite3
             from pathlib import Path as _Path
+            from core.project_local import get_project_ipc_dir
 
-            db_path = _Path.home() / ".claude-ipc-data" / "messages.db"
+            # Use project-local database instead of global
+            db_path = get_project_ipc_dir() / "state" / "messages.db"
 
             if reset_all:
                 # Remove ALL instances from broker (both sessions and instances tables)
@@ -833,8 +864,10 @@ Documentation: docs/IPC_UNIFIED_GUIDE_KO.md
             # Delete instance from both tables
             import sqlite3 as _sqlite3
             from pathlib import Path as _Path
+            from core.project_local import get_project_ipc_dir
 
-            db_path = _Path.home() / ".claude-ipc-data" / "messages.db"
+            # Use project-local database instead of global
+            db_path = get_project_ipc_dir() / "state" / "messages.db"
             removed_sessions = 0
             removed_instances = 0
             try:
@@ -874,7 +907,8 @@ Documentation: docs/IPC_UNIFIED_GUIDE_KO.md
                     broker_instances = {}
                     try:
                         if broker_client:
-                            resp = broker_client.status()
+                            # FIXED: Use list_instances() instead of status()
+                            resp = broker_client.list_instances()
                             for inst in resp.get("instances", []):
                                 # Broker returns "id" not "instance_id"
                                 instance_id = inst.get("id") or inst.get("instance_id")
@@ -941,7 +975,8 @@ Documentation: docs/IPC_UNIFIED_GUIDE_KO.md
                     if not broker_client:
                         print("error: broker client unavailable", file=sys.stderr)
                         return 12
-                    resp = broker_client.status()
+                    # FIXED: Use list_instances() instead of status()
+                    resp = broker_client.list_instances()
                     instances = resp.get("instances", [])
                     print(f"\n📋 Broker Instances ({len(instances)} instance(s)):\n")
                     if not instances:
@@ -1018,10 +1053,12 @@ Documentation: docs/IPC_UNIFIED_GUIDE_KO.md
         # Correlation token and DB baseline
         import sqlite3 as _sqlite3
         from pathlib import Path as _Path
+        from core.project_local import get_project_ipc_dir
         import time as _time
 
         corr = ns.corr or f"corr-{abs(hash(prompt + ns.to)) % 100000}"
-        db_path = _Path.home() / ".claude-ipc-data" / "messages.db"
+        # Use project-local database instead of global
+        db_path = get_project_ipc_dir() / "state" / "messages.db"
         last_id = 0
         try:
             conn = _sqlite3.connect(db_path, timeout=2.0)
@@ -1097,7 +1134,7 @@ Documentation: docs/IPC_UNIFIED_GUIDE_KO.md
 
     def _cmd_responder(ns: argparse.Namespace) -> int:
         try:
-            from src.core import responder_proc
+            from core import responder_proc
         except Exception as e:
             print(f"error: responder core not available: {e}", file=sys.stderr)
             return 60

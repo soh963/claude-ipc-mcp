@@ -274,3 +274,39 @@ def get_or_create_project_port(
         # Preferred port occupied, find next available
         port = find_available_port(preferred_port + 1, host)
         return port, "project-specific"
+
+
+def get_project_port_auto(project_root: Optional[Path] = None) -> int:
+    """
+    Get project-specific port using SHA256-based allocation (NEW DESIGN).
+
+    Port Range: 9876-19875 (10,000 ports)
+    Algorithm: SHA256(normalized_project_path) mod 10000 + 9876
+
+    Args:
+        project_root: Project root directory (None = auto-detect)
+
+    Returns:
+        Port number in range 9876-19875
+
+    Examples:
+        D:\\claude-ipc-mcp → 12458
+        D:\\test-tem → 15732
+        C:\\project1 → 10234
+    """
+    from core.project_local import detect_project_root
+
+    if project_root is None:
+        project_root = detect_project_root()
+
+    # Normalize path for consistent hashing (lowercase, forward slashes)
+    normalized_path = str(project_root.resolve()).lower().replace('\\', '/')
+
+    # SHA256 hash
+    hash_bytes = hashlib.sha256(normalized_path.encode()).digest()
+    hash_int = int.from_bytes(hash_bytes[:4], byteorder='big')
+
+    # Map to port range 9876-19875 (10000 ports)
+    port = 9876 + (hash_int % 10000)
+
+    return port

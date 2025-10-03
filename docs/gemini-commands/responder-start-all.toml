@@ -2,9 +2,9 @@
 
 description = "🚀 Start all auto-responders"
 prompt = """
-Start auto-responders for all registered instances:
+Start all auto-responders:
 
-!{uv run python %IPC_CHAT%\\tools\\ipc_global_command.py responder start-all --policy smart --detach}
+!{uv run python D:/claude-ipc-mcp/tools/ipc_global_command.py responder start-all --policy smart --detach}
 
 This starts background responders for every registered instance.
 """

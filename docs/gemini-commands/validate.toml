@@ -1,0 +1,14 @@
+# IPC Command for Gemini CLI
+
+description = "✅ Validate all project configurations"
+prompt = """
+Validate all IPC project configurations:
+
+!{uv run python D:/claude-ipc-mcp/tools/ipc_global_command.py validate}
+
+This checks:
+- .ipc directory structure
+- Configuration files
+- Session files
+- Broker connectivity
+"""

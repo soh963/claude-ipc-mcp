@@ -2,9 +2,9 @@
 
 description = "🚀 Start global IPC broker"
 prompt = """
-Start the global IPC message broker:
+Start global IPC broker:
 
-!{uv run python %IPC_CHAT%\\tools\\ipc_global_command.py broker start}
+!{uv run python D:/claude-ipc-mcp/tools/ipc_global_command.py broker start}
 
 This:
 - Starts TCP server on port 9876

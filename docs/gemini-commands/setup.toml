@@ -1,0 +1,15 @@
+# IPC Command for Gemini CLI
+
+description = "⚡ Complete setup wizard (init + register + responder)"
+prompt = """
+Complete IPC setup wizard for your instance.
+
+!{echo "🚀 Setting up instance: {args[0]}" && uv run python D:/claude-ipc-mcp/tools/ipc_global_command.py init && echo "  ✓ Initialized .ipc directory" && uv run python D:/claude-ipc-mcp/tools/ipc_global_command.py register {args[0]} && echo "  ✓ Registered instance: {args[0]}" && uv run python D:/claude-ipc-mcp/tools/ipc_global_command.py responder start {args[0]} --policy smart --detach && echo "  ✓ Auto-responder started for: {args[0]}" && echo "" && echo "✨ Setup complete! Instance '{args[0]}' is ready."}
+
+This one command:
+1. Initializes .ipc directory
+2. Registers instance with broker
+3. Starts auto-responder
+
+Perfect for first-time setup!
+"""

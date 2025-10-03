@@ -2,9 +2,9 @@
 
 description = "📋 Show current session info"
 prompt = """
-Display current IPC session information:
+Show current session info:
 
-!{uv run python %IPC_CHAT%\\tools\\ipc_global_command.py session}
+!{uv run python D:/claude-ipc-mcp/tools/ipc_global_command.py session}
 
 Shows:
 - Instance ID

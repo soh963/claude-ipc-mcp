@@ -95,14 +95,25 @@ List instances                      # See who's online
 
 **Why slash commands?** They're more reliable and work across different AI CLIs without configuration issues.
 
+## What's New in v2.0
+
+🎉 **Slash Command Format Update** - All Claude Code slash commands now use colon (`:`) separator format:
+- `/ipc:setup` (was `/ipc-setup`)
+- `/ipc:status` (was `/ipc-status`)
+- `/ipc:send` (was `/ipc-send`)
+- ... and 24 more commands
+
+See [docs/changes/2025-10-03-slash-command-colon-format.md](docs/changes/2025-10-03-slash-command-colon-format.md) for migration guide.
+
 ## Documentation
 
 ### Getting Started
 - **[docs/INSTALL.md](docs/INSTALL.md)** - Complete installation guide
-- **[docs/platform-guides/CLAUDE_CODE_SETUP.md](docs/platform-guides/CLAUDE_CODE_SETUP.md)** - Claude Code slash commands setup (NEW)
+- **[docs/CLAUDE_CODE_SLASH_COMMANDS.md](docs/CLAUDE_CODE_SLASH_COMMANDS.md)** - Complete slash command reference (27 commands) ⭐
+- **[docs/platform-guides/CLAUDE_CODE_SETUP.md](docs/platform-guides/CLAUDE_CODE_SETUP.md)** - Claude Code slash commands setup
 - **[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** - Common issues and solutions
 
-### AI CLI Integration (NEW)
+### AI CLI Integration
 - **[docs/IPC_CLI_INTEGRATION_SUMMARY.md](docs/IPC_CLI_INTEGRATION_SUMMARY.md)** - Complete CLI integration across all platforms
 - **[docs/claude-commands/INSTALL.md](docs/claude-commands/INSTALL.md)** - Claude Code slash commands (25 commands)
 - **[docs/gemini-commands/INSTALL.md](docs/gemini-commands/INSTALL.md)** - Gemini CLI integration (24 commands)

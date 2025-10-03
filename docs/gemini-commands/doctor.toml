@@ -1,0 +1,15 @@
+# IPC Command for Gemini CLI
+
+description = "🏥 Diagnose IPC system health"
+prompt = """
+Run IPC system diagnostics:
+
+!{uv run python D:/claude-ipc-mcp/tools/ipc_global_command.py doctor}
+
+This checks:
+- Broker connectivity
+- Project configuration
+- Session validity
+- File permissions
+- Database integrity
+"""

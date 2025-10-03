@@ -21,17 +21,19 @@ class ResponderProcess:
 
 
 def _data_dirs() -> Path:
-    return Path(os.path.expandvars(r"%USERPROFILE%\.claude-ipc-data"))
+    # Use project-local .ipc directory instead of global
+    from core.project_local import get_project_ipc_dir
+    return get_project_ipc_dir() / "state" / "responders"
 
 
 def _pid_file(instance_id: str) -> Path:
-    base = _data_dirs() / "responders"
+    base = _data_dirs()
     base.mkdir(parents=True, exist_ok=True)
     return base / f"{instance_id}.pid"
 
 
 def _status_file(instance_id: str) -> Path:
-    base = _data_dirs() / "responders"
+    base = _data_dirs()
     base.mkdir(parents=True, exist_ok=True)
     return base / f"{instance_id}.json"
 

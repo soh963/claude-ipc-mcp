@@ -20,162 +20,83 @@ import time
 from pathlib import Path
 from typing import Optional
 
-from ._shared import ensure_broker
-from core.project_context import read_session
-from core import broker_client
+# MIGRATION: Use local_broker_client (absolute rules)
+import local_broker_client as broker_client
 from core.logging_utils import with_logging, setup_project_logging
 
-# Import retry if available, fallback gracefully
-try:
-    from core.retry import retry
 
-    _retry_available = True
-except ImportError:
-    _retry_available = False
-
-
-def check_project_initialized(project_root: Optional[Path] = None) -> bool:
-    """Check if the project is properly initialized with .ipc structure."""
-    if project_root is None:
-        project_root = Path.cwd()
-
-    project_root = project_root.resolve()
-    ipc_root = project_root / ".ipc"
-
-    # Check if .ipc directory exists
-    if not ipc_root.exists():
-        return False
-
-    # Check for critical subdirectories
-    required_dirs = ["config", "state"]
-    for dir_name in required_dirs:
-        if not (ipc_root / dir_name).exists():
-            return False
-
-    # Check for project.json in state directory
-    project_file = ipc_root / "state" / "project.json"
-    if not project_file.exists():
-        return False
-
-    return True
-
-
-def check_broker_reachable() -> bool:
-    """Check if broker is reachable by testing status."""
-    try:
-        resp = broker_client.status()
-        # Broker is reachable if we get any response (even error responses mean broker is up)
-        return resp.get("status") in ("ok", "error")
-    except Exception:
-        return False
-
-
-def perform_ping_with_retry(target: Optional[str] = None) -> dict:
-    """Perform ping with retry logic and measure round-trip time."""
-    target = target or "local"
+def check_local_broker(project_root: Path) -> dict:
+    """Check local broker status and measure response time."""
     start_time = time.perf_counter()
 
-    def ping_fn():
-        sess = read_session()
-        return broker_client.ping(session_token=sess.session_token if sess else None, target=target)
-
-    if _retry_available:
-        # Use retry logic from core.retry
-        success, result = retry(ping_fn, attempts=3, timeout_s=5.0)
-    else:
-        # Fallback to simple retry
-        success = False
-        result = None
-        for _ in range(3):
-            try:
-                result = ping_fn()
-                success = True
-                break
-            except Exception as e:
-                result = e
-                time.sleep(0.2)
+    # Check if broker is running
+    running = broker_client.is_broker_running(project_root)
 
     elapsed_time = time.perf_counter() - start_time
     elapsed_ms = int(elapsed_time * 1000)
 
-    if success and isinstance(result, dict):
-        # Extract RTT from broker response
-        rtt_ms = result.get("rtt_ms", elapsed_ms)
-        ok = result.get("ok", False)
-
-        return {"ok": ok, "rtt_ms": rtt_ms, "elapsed_ms": elapsed_ms, "target": target}
+    if running:
+        return {
+            "ok": True,
+            "rtt_ms": elapsed_ms,
+            "elapsed_ms": elapsed_ms,
+            "mode": "local",
+        }
     else:
-        # Ping failed, return error state
         return {
             "ok": False,
             "rtt_ms": 0,
             "elapsed_ms": elapsed_ms,
-            "target": target,
-            "error": str(result) if isinstance(result, Exception) else "Unknown error",
+            "mode": "local",
+            "error": "Local broker not running",
         }
 
 
 @with_logging("ping")
 def run_ping(target: Optional[str] = None, project_root: Optional[Path] = None) -> int:
-    """Run the ping command.
+    """Run the ping command (local broker mode - absolute rules).
 
     Args:
-        target: Target to ping (defaults to "local")
-        project_root: Project root directory (defaults to current working directory)
+        target: Ignored (local broker only)
+        project_root: Project root directory (auto-detected if not provided)
 
     Returns:
         Exit code (0 = success, 1 = failure)
     """
+    # Auto-detect project root (.ipc priority)
     if project_root is None:
-        project_root = Path.cwd()
+        project_root = broker_client.detect_project_root()
 
     project_root = project_root.resolve()
-    target = target or "local"
 
-    # Check if project is initialized
-    if not check_project_initialized(project_root):
+    # Check if .ipc exists
+    if not (project_root / ".ipc").exists():
         print("error: project not initialized; run 'ipc init'", file=sys.stderr)
         return 1
 
     # Setup logging
     setup_project_logging(project_root)
 
-    # Try to ensure broker is running
-    try:
-        ensure_broker()
-    except Exception:
-        pass  # Continue and let the ping attempt fail gracefully
-
-    # Check if broker is reachable
-    if not check_broker_reachable():
-        print("error: broker offline or unreachable", file=sys.stderr)
-        return 1
-
-    # Perform ping with retry logic
-    ping_result = perform_ping_with_retry(target)
+    # Check local broker status
+    ping_result = check_local_broker(project_root)
 
     if not ping_result["ok"]:
-        if "error" in ping_result:
-            print(f"error: ping failed - {ping_result['error']}", file=sys.stderr)
-        else:
-            print("error: ping failed", file=sys.stderr)
+        error_msg = ping_result.get("error", "Local broker not running")
+        print(f"error: {error_msg}", file=sys.stderr)
         return 1
 
     # Extract metrics
     rtt_ms = ping_result["rtt_ms"]
     elapsed_ms = ping_result["elapsed_ms"]
 
-    # Generate placeholder percentile metrics based on current measurement
-    # This is acceptable per requirements: "placeholder values acceptable"
-    p95_ms = max(rtt_ms, int(rtt_ms * 1.1))  # Slightly higher than RTT
-    p99_ms = max(rtt_ms, int(rtt_ms * 1.2))  # Even higher for p99
+    # Generate placeholder percentile metrics
+    p95_ms = max(rtt_ms, int(rtt_ms * 1.1))
+    p99_ms = max(rtt_ms, int(rtt_ms * 1.2))
 
-    # Format output according to requirements
-    # Must include: "pong (target) rtt_ms=<number>" and timing information
-    # Include broker state keyword for contract expectations
+    # Format output (local broker mode)
     output = (
-        f"pong ({target}) rtt_ms={rtt_ms} p95={p95_ms}ms p99={p99_ms}ms "
-        f"latency={elapsed_ms}ms broker=online"
+        f"pong (local) rtt_ms={rtt_ms} p95={p95_ms}ms p99={p99_ms}ms "
+        f"latency={elapsed_ms}ms broker=online mode=local"
     )
     print(output)
 

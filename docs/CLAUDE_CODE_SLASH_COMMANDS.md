@@ -1,227 +1,306 @@
-# Claude Code Slash Commands Guide
+# Claude Code IPC Slash Commands - 완전 가이드
 
-Claude Code CLI에서 IPC 명령을 slash command로 사용하는 가이드입니다.
+## 📋 개요
 
-## 설치 방법
+Claude Code CLI에서 `:` (콜론) 구분자를 사용하여 IPC 명령어를 실행할 수 있습니다.
 
-### Windows (PowerShell)
+**명령어 형식**: `/ipc:command`
 
-```powershell
-cd D:\claude-ipc-mcp
-.\scripts\install-claude-code-slash-commands.ps1
+예: `/ipc:setup`, `/ipc:status`, `/ipc:send`
+
+## 🚀 빠른 시작
+
+### 1. 최초 설정 (원클릭)
+
+```
+/ipc:setup <instance-name>
 ```
 
-### Linux/Mac (Bash)
+예시:
+```
+/ipc:setup claude-main
+```
+
+이 명령어는 다음을 자동으로 수행합니다:
+- ✅ .ipc 디렉토리 초기화
+- 📝 인스턴스 등록
+- 🤖 자동 응답기 시작
+- 🔗 연결 확인
+
+### 2. 상태 확인
+
+```
+/ipc:status
+```
+
+브로커 연결 상태, 활성 인스턴스 수, 세션 정보를 표시합니다.
+
+### 3. 메시지 전송
+
+```
+/ipc:send <from> <to> <message>
+```
+
+예시:
+```
+/ipc:send claude gemini "API 설계를 도와줄 수 있나요?"
+```
+
+### 4. 메시지 확인
+
+```
+/ipc:check <instance-name>
+```
+
+예시:
+```
+/ipc:check claude-main
+```
+
+## 📚 전체 명령어 목록 (27개)
+
+### 🔧 설정 및 관리
+| 명령어 | 설명 | 예시 |
+|--------|------|------|
+| `/ipc:setup` | ⚡ 완전한 설정 마법사 | `/ipc:setup myname` |
+| `/ipc:init` | 📁 .ipc 디렉토리 초기화 | `/ipc:init` |
+| `/ipc:register` | 📝 인스턴스 등록 | `/ipc:register myname` |
+| `/ipc:validate` | ✅ 설정 검증 | `/ipc:validate` |
+
+### 📊 상태 및 진단
+| 명령어 | 설명 | 예시 |
+|--------|------|------|
+| `/ipc:status` | 📊 연결 상태 확인 | `/ipc:status` |
+| `/ipc:ping` | 🏓 연결 테스트 | `/ipc:ping` |
+| `/ipc:doctor` | 🔍 문제 진단 및 자동 수정 | `/ipc:doctor` |
+| `/ipc:fix` | 🔧 설정 자동 수정 | `/ipc:fix` |
+
+### 💬 메시징
+| 명령어 | 설명 | 예시 |
+|--------|------|------|
+| `/ipc:send` | 📤 메시지 전송 | `/ipc:send alice bob "Hi"` |
+| `/ipc:check` | 📬 받은 편지함 확인 | `/ipc:check alice` |
+| `/ipc:ask` | 💬 응답 대기 메시지 | `/ipc:ask alice bob "Q?" 30` |
+| `/ipc:broadcast` | 📢 전체 브로드캐스트 | `/ipc:broadcast "Update"` |
+
+### 👥 인스턴스 관리
+| 명령어 | 설명 | 예시 |
+|--------|------|------|
+| `/ipc:list` | 📋 인스턴스 목록 | `/ipc:list` |
+| `/ipc:rename` | ✏️ 이름 변경 | `/ipc:rename old new` |
+| `/ipc:instances-delete` | 🗑️ 인스턴스 삭제 | `/ipc:instances-delete id` |
+| `/ipc:instances-reset` | 🔄 전체 초기화 | `/ipc:instances-reset` |
+
+### 🤖 자동 응답기
+| 명령어 | 설명 | 예시 |
+|--------|------|------|
+| `/ipc:responder-start` | ▶️ 응답기 시작 | `/ipc:responder-start alice smart` |
+| `/ipc:responder-status` | ℹ️ 응답기 상태 | `/ipc:responder-status alice` |
+| `/ipc:responder-stop` | ⏹️ 응답기 중지 | `/ipc:responder-stop alice` |
+| `/ipc:responder-start-all` | ▶️ 모두 시작 | `/ipc:responder-start-all` |
+| `/ipc:responder-stop-all` | ⏹️ 모두 중지 | `/ipc:responder-stop-all` |
+
+### 🔌 브로커 관리
+| 명령어 | 설명 | 예시 |
+|--------|------|------|
+| `/ipc:broker-start` | 🚀 브로커 시작 | `/ipc:broker-start` |
+| `/ipc:broker-status` | 📊 브로커 상태 | `/ipc:broker-status` |
+| `/ipc:broker-stop` | 🛑 브로커 중지 | `/ipc:broker-stop` |
+
+### 🗂️ 세션 및 메시지
+| 명령어 | 설명 | 예시 |
+|--------|------|------|
+| `/ipc:session` | 📋 세션 정보 | `/ipc:session` |
+| `/ipc:session-clear` | 🧹 세션 초기화 | `/ipc:session-clear` |
+| `/ipc:messages-clear` | 🗑️ 메시지 삭제 | `/ipc:messages-clear --force` |
+
+## 🔄 Claude Code 재시작 후 문제 해결
+
+### 문제: 브로커/인스턴스 인식 안 됨
+
+Claude Code를 재시작한 후 IPC 연결이 끊어진 경우:
+
+#### 1단계: 상태 확인
+```
+/ipc:status
+```
+
+출력 예시:
+```json
+{
+  "broker": {
+    "running": false,
+    "version": "2.0.0"
+  },
+  "connections": 0
+}
+```
+
+#### 2단계: 브로커 시작 (필요시)
+```
+/ipc:broker-start
+```
+
+#### 3단계: 인스턴스 재등록
+```
+/ipc:register <your-instance-name>
+```
+
+또는 완전한 재설정:
+```
+/ipc:setup <your-instance-name>
+```
+
+#### 4단계: 연결 확인
+```
+/ipc:ping
+```
+
+### 자동 진단 및 수정
+
+가장 빠른 방법:
+```
+/ipc:doctor
+```
+
+이 명령어는 자동으로:
+- ✅ 브로커 연결 확인
+- 🔍 세션 토큰 검증
+- 💾 데이터베이스 무결성 검사
+- 🔧 문제 자동 수정
+
+## 💡 사용 시나리오
+
+### 시나리오 1: AI 간 협업
 
 ```bash
-cd /path/to/claude-ipc-mcp
-bash scripts/install-claude-code-slash-commands.sh
+# Claude 인스턴스 1 (Frontend)
+/ipc:setup claude-frontend
+/ipc:send claude-frontend gemini "UI 컴포넌트 디자인 피드백 부탁합니다"
+
+# Gemini 인스턴스
+/ipc:check gemini
+/ipc:send gemini claude-frontend "좋습니다. shadcn/ui 사용을 제안합니다"
+
+# Claude 인스턴스 1
+/ipc:check claude-frontend
 ```
 
-설치 후 **Claude Code를 재시작**해야 새로운 slash command가 활성화됩니다.
-
-## 사용 가능한 Slash Commands
-
-### 📊 상태 확인
-
-#### `/ipc-status`
-브로커 연결 상태 확인
-```
-/ipc-status
-```
-
-#### `/ipc-ping`
-브로커와의 연결 테스트
-```
-/ipc-ping
-```
-
-### 📝 인스턴스 관리
-
-#### `/ipc-register`
-현재 인스턴스를 IPC 시스템에 등록
-```
-/ipc-register my-instance-name
-```
-
-#### `/ipc-list`
-등록된 모든 인스턴스 목록 보기
-```
-/ipc-list
-```
-
-#### `/ipc-rename`
-인스턴스 이름 변경 (rate limited: 1시간에 1회)
-```
-/ipc-rename old-name new-name
-```
-
-### 💬 메시지 전송
-
-#### `/ipc-send`
-다른 인스턴스에게 메시지 전송 (응답 대기 안 함)
-```
-/ipc-send target-instance "안녕하세요!"
-```
-
-#### `/ipc-ask`
-메시지 전송 후 10초간 응답 대기
-```
-/ipc-ask gemini "현재 작업 상태 알려줘"
-```
-
-#### `/ipc-broadcast`
-모든 인스턴스에게 메시지 전송
-```
-/ipc-broadcast "빌드가 완료되었습니다"
-```
-
-### 📬 메시지 확인
-
-#### `/ipc-check`
-받은 메시지 확인
-```
-/ipc-check
-```
-
-### 🤖 자동응답 관리
-
-#### `/ipc-responder-start`
-인스턴스에 대한 자동응답 프로세스 시작
-```
-/ipc-responder-start gemini
-```
-
-#### `/ipc-responder-status`
-자동응답 프로세스 상태 확인
-```
-/ipc-responder-status gemini
-```
-
-#### `/ipc-responder-stop`
-자동응답 프로세스 정지
-```
-/ipc-responder-stop gemini
-```
-
-### 🚀 프로젝트 설정
-
-#### `/ipc-init`
-현재 프로젝트에 IPC 초기화 (`.ipc/` 디렉토리 생성)
-```
-/ipc-init
-```
-
-#### `/ipc-setup`
-완전한 IPC 설정 (등록 + 자동응답 시작)
-```
-/ipc-setup my-instance
-```
-
-### 🏥 진단 및 수정
-
-#### `/ipc-doctor`
-IPC 시스템 진단 및 자동 수정
-```
-/ipc-doctor
-```
-
-## 사용 예시
-
-### 시나리오 1: 기본 설정 및 메시지 교환
+### 시나리오 2: 자동 응답 시스템
 
 ```bash
-# 1. 브로커 상태 확인
-/ipc-status
+# 자동 응답기 설정
+/ipc:setup gemini-assistant
+/ipc:responder-start gemini-assistant smart
 
-# 2. 현재 인스턴스 등록
-/ipc-register claude-main
+# 다른 인스턴스에서 메시지 전송
+/ipc:send claude gemini-assistant "현재 시간 알려줘"
 
-# 3. 다른 인스턴스 목록 확인
-/ipc-list
-
-# 4. gemini에게 메시지 전송
-/ipc-send gemini "프론트엔드 작업 시작했어"
-
-# 5. 메시지 확인
-/ipc-check
-
-# 6. 응답 대기하며 질문
-/ipc-ask gemini "백엔드 API 준비됐어?"
+# 자동 응답 확인
+/ipc:check claude
 ```
 
-### 시나리오 2: 자동응답 설정
+### 시나리오 3: 멀티 프로젝트 메시징
 
 ```bash
-# 1. gemini 인스턴스에 자동응답 시작
-/ipc-responder-start gemini
+# 프로젝트 A
+cd /path/to/project-a
+/ipc:setup backend-api
 
-# 2. 자동응답 상태 확인
-/ipc-responder-status gemini
+# 프로젝트 B
+cd /path/to/project-b
+/ipc:setup frontend-app
 
-# 3. gemini에게 메시지 (자동으로 응답 받음)
-/ipc-ask gemini "준비됐어?"
-
-# 4. 작업 완료 후 자동응답 정지
-/ipc-responder-stop gemini
+# 프로젝트 간 통신
+/ipc:send frontend-app backend-api "API 스펙 공유 부탁"
 ```
 
-### 시나리오 3: 팀 협업 워크플로
+## 🛠️ 문제 해결 체크리스트
 
+### ✅ 연결 문제
+- [ ] `/ipc:broker-status` - 브로커 실행 중인가?
+- [ ] `/ipc:status` - 연결 상태 확인
+- [ ] `/ipc:ping` - 네트워크 지연 확인
+- [ ] `/ipc:doctor` - 자동 진단 실행
+
+### ✅ 메시지 문제
+- [ ] `/ipc:list` - 대상 인스턴스 등록되었나?
+- [ ] `/ipc:check <instance>` - 메시지 도착했나?
+- [ ] `/ipc:responder-status <instance>` - 자동 응답기 작동 중인가?
+
+### ✅ 세션 문제
+- [ ] `/ipc:session` - 세션 정보 확인
+- [ ] `/ipc:register <name>` - 재등록 시도
+- [ ] `/ipc:session-clear` - 세션 초기화 후 재등록
+
+## 📖 관련 문서
+
+- **설치 가이드**: `docs/platform-guides/CLAUDE_CODE_SETUP.md`
+- **통합 가이드**: `docs/IPC_UNIFIED_GUIDE_KO.md`
+- **명령어 참조**: `docs/ipc_cli_commands.md`
+- **문제 해결**: `docs/TROUBLESHOOTING.md`
+
+## 🔗 추가 리소스
+
+### 환경 변수
 ```bash
-# Claude Code 인스턴스 1
-/ipc-setup claude-frontend
-
-# Claude Code 인스턴스 2
-/ipc-setup claude-backend
-
-# Coordinator
-/ipc-register coordinator
-/ipc-ask claude-frontend "UI 컴포넌트 작업 시작해줘"
-/ipc-ask claude-backend "API 엔드포인트 작업 시작해줘"
+IPC_HOST=127.0.0.1              # 브로커 호스트
+IPC_GLOBAL_PORT=9876            # 브로커 포트
+IPC_SHARED_SECRET=secret        # 인증 토큰 (선택)
 ```
 
-## 문제 해결
-
-### Slash Command가 보이지 않음
-
-1. Claude Code 완전 재시작
-2. 설치 스크립트 재실행
-3. `~/.claude/commands/` 디렉토리에 JSON 파일들이 있는지 확인
-
-```bash
-ls -la ~/.claude/commands/ipc-*.json
+### 디렉토리 구조
+```
+.ipc/
+├── config/         # 프로젝트 설정
+├── logs/           # 브로커 및 응답기 로그
+├── state/
+│   ├── session.json      # 세션 토큰
+│   ├── broker.pid        # 브로커 PID
+│   └── messages.db       # 로컬 메시지 DB
+└── secret/         # 민감 데이터
 ```
 
-### 명령 실행 시 에러
-
-1. 브로커가 실행 중인지 확인: `/ipc-status`
-2. uv와 Python이 설치되어 있는지 확인
-3. 프로젝트 경로가 올바른지 확인
-
-### "command not found" 에러
-
-설치 스크립트의 `PROJECT_ROOT` 경로가 올바른지 확인:
-```bash
-cat ~/.claude/commands/ipc-status.json
+### 전역 데이터
+```
+~/.claude-ipc-data/
+├── messages.db           # 전역 메시지 DB
+├── large-messages/       # 큰 메시지 파일 (>10KB)
+└── responders/
+    ├── <instance>.pid
+    └── <instance>.json
 ```
 
-경로가 잘못되었다면 설치 스크립트를 올바른 프로젝트 디렉토리에서 다시 실행하세요.
+## 🎯 베스트 프랙티스
 
-## vs IPC Wrapper
+1. **항상 setup으로 시작**: `/ipc:setup <name>` - 모든 것을 한 번에 설정
+2. **정기적으로 상태 확인**: `/ipc:status` - 연결 상태 모니터링
+3. **자동 응답기 활용**: 백그라운드 메시지 처리 자동화
+4. **재시작 후 doctor 실행**: `/ipc:doctor` - 자동 문제 해결
+5. **명확한 인스턴스 이름**: 프로젝트-역할 형식 사용 (예: `backend-api`, `frontend-dev`)
 
-| 기능 | Claude Code Slash Commands | IPC Wrapper (터미널) |
-|------|---------------------------|---------------------|
-| 사용 위치 | Claude Code 내부 | 터미널 (Bash/PowerShell) |
-| 명령 형식 | `/ipc-status` | `ipc status` |
-| 자동완성 | Claude Code 지원 | Shell 자동완성 |
-| 스크립팅 | 제한적 | 쉽게 스크립트 작성 가능 |
-| 설치 | JSON 파일 생성 | Alias 설정 |
+## 🆕 변경 사항 (v2.0)
 
-두 가지 방법 모두 사용 가능하며, Claude Code 내부에서는 slash command가, 터미널에서는 wrapper가 더 편리합니다.
+### 명령어 형식 변경
+- **이전**: `/ipc-setup`, `/ipc-status`
+- **현재**: `/ipc:setup`, `/ipc:status`
+- **이유**: 계층적 명령어 구조, 더 나은 가독성
 
-## 참고 문서
+### 주요 개선사항
+- ✅ 모든 명령어에 이모지 아이콘 추가
+- 📝 상세한 설명 및 사용 예시
+- 🔄 재시작 후 자동 재연결 가이드
+- 🔍 향상된 문제 해결 안내
 
-- [IPC Wrapper Guide](IPC_WRAPPER_GUIDE.md) - 터미널 사용 가이드
-- [IPC Unified Guide (Korean)](IPC_UNIFIED_GUIDE_KO.md) - 통합 가이드
-- [CLI Commands Reference](ipc_cli_commands.md) - 명령어 레퍼런스
+## 📞 지원
+
+문제가 발생하면:
+1. `/ipc:doctor` - 자동 진단 실행
+2. `docs/TROUBLESHOOTING.md` - 문제 해결 가이드 참조
+3. GitHub Issues - https://github.com/anthropics/claude-ipc-mcp/issues
+
+---
+
+**버전**: 2.0.0
+**최종 업데이트**: 2025-10-03
+**문서 유형**: Claude Code Slash Commands 완전 가이드

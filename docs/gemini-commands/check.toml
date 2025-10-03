@@ -2,9 +2,9 @@
 
 description = "📬 Check for new messages"
 prompt = """
-Check for new IPC messages:
+Check for new messages:
 
-!{uv run python %IPC_CHAT%\\tools\\ipc_global_command.py messages list}
+!{uv run python D:/claude-ipc-mcp/tools/ipc_global_command.py messages list}
 
 Shows all messages in the current project.
 """

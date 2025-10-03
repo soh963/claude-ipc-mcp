@@ -5,9 +5,9 @@ import json
 import os
 from pathlib import Path
 
-from ._shared import ensure_broker
+# MIGRATION: Use local_broker_client (absolute rules)
+import local_broker_client as broker_client
 from core.project_context import write_session, default_instance_id
-from core import broker_client
 from core.logging_utils import with_logging, setup_project_logging
 
 
@@ -18,7 +18,7 @@ def _initialized(root: Path | None = None) -> bool:
 
 @with_logging("register")
 def run_register(no_default: bool = False, instance_id: str | None = None) -> int:
-    """Register this project instance with the broker and persist session.
+    """Register this instance with local broker (absolute rules).
 
     Args:
         no_default: Whether to skip default instance_id from config
@@ -27,55 +27,40 @@ def run_register(no_default: bool = False, instance_id: str | None = None) -> in
     Prints JSON: {"instance_id", "session_token"} on success.
     Returns 0 on success, 12 on failure (to match router conventions).
     """
-    root = Path.cwd()
+    # Auto-detect project root (.ipc priority)
+    root = broker_client.detect_project_root()
+
     if not _initialized(root):
         print("error: project not initialized; run 'ipc init'")
         return 12
 
-    # Setup logging and ensure broker
+    # Setup logging
     setup_project_logging(root)
-    try:
-        ensure_broker()
-    except Exception:
-        pass
 
     # Use provided instance_id or read from config
     instance = instance_id if instance_id else default_instance_id(root)
 
-    # Derive auth token from shared secret
-    shared = os.environ.get("IPC_SHARED_SECRET", "")
-    auth_token: str | None = None
-    if shared:
-        auth_token = hashlib.sha256(f"{instance}:{shared}".encode()).hexdigest()
+    # Register with local broker (simplified - no TCP auth token needed)
+    try:
+        resp = broker_client.register(instance)
 
-    # Attempt register with short retries (up to ~2.5s)
-    import time as _t
+        if resp.get("status") == "ok":
+            session_token = resp.get("session_token", "")
 
-    session_token: str | None = None
-    last_err: str | None = None
-    for _ in range(50):
-        try:
-            resp = broker_client.register(instance, auth_token=auth_token)
-            if resp.get("status") == "ok" and resp.get("session_token"):
-                session_token = resp["session_token"]
-                break
-            last_err = resp.get("message")
-        except Exception as e:  # noqa: BLE001
-            last_err = str(e)
-        _t.sleep(0.05)
+            # Persist session into project state
+            write_session(instance, session_token, root)
 
-    if not session_token:
-        diag_tok = (auth_token[:8] + "…") if auth_token else None
-        if last_err:
-            print(f"error: failed to register: {last_err} (instance={instance} token={diag_tok})")
+            print(json.dumps({
+                "instance_id": instance,
+                "session_token": session_token,
+                "mode": "local"
+            }))
+            return 0
         else:
-            print(f"error: failed to register (instance={instance} token={diag_tok})")
+            error_msg = resp.get("message", "Registration failed")
+            print(f"error: {error_msg} (instance={instance})")
+            return 12
+
+    except Exception as e:
+        print(f"error: failed to register: {e} (instance={instance})")
         return 12
-
-    # Persist session into project state
-    write_session(instance, session_token, root)
-
-    # We don't manage legacy HOME pointers here; that is handled by tools/ipc_register_with_responder.py
-
-    print(json.dumps({"instance_id": instance, "session_token": session_token}))
-    return 0

@@ -1,0 +1,228 @@
+from __future__ import annotations
+
+import json
+import socket
+import time
+import os
+from pathlib import Path
+from typing import Any, Dict, Optional
+
+def _get_project_config() -> tuple[str, int]:
+    """Get broker host and port - automatically uses project-specific port."""
+    # Always use project-specific port based on project path
+    try:
+        from core.project_local import detect_project_root
+        from core.project_port import get_project_port_auto
+
+        project_root = detect_project_root()
+
+        # Check if project.json already has configuration
+        project_json = project_root / ".ipc" / "state" / "project.json"
+        if project_json.exists():
+            config = json.loads(project_json.read_text(encoding="utf-8"))
+            host = config.get("broker_host", "127.0.0.1")
+            port = config.get("broker_port")
+            if port:
+                return host, int(port)
+
+        # Calculate project-specific port from project path
+        host = os.getenv("IPC_HOST", "127.0.0.1")
+        port = get_project_port_auto(project_root)
+
+        return host, port
+
+    except Exception:
+        # Fallback to environment variables only if project detection fails
+        host = os.getenv("IPC_HOST", "127.0.0.1")
+        try:
+            port = int(os.getenv("IPC_GLOBAL_PORT", os.getenv("IPC_PORT", "9876")))
+        except ValueError:
+            port = 9876
+        return host, port
+
+# Get project-specific or global configuration
+IPC_HOST, IPC_PORT = _get_project_config()
+
+
+def _send_request(request: Dict[str, Any]) -> Dict[str, Any]:
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # Get timeout from environment variable or use default
+        timeout = float(os.getenv("IPC_TIMEOUT", "30.0"))  # Increased default to 30 seconds
+        s.settimeout(timeout)
+        s.connect((IPC_HOST, IPC_PORT))
+        s.send(json.dumps(request).encode("utf-8"))
+        resp = s.recv(65536).decode("utf-8")
+        s.close()
+        return json.loads(resp)
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+def status() -> Dict[str, Any]:
+    return _send_request({"action": "list"})
+
+
+def register(instance_id: str, auth_token: Optional[str] = None) -> Dict[str, Any]:
+    req = {"action": "register", "instance_id": instance_id}
+    if auth_token:
+        req["auth_token"] = auth_token
+    return _send_request(req)
+
+
+def send(session_token: str, from_id: str, to_id: str, content: str) -> Dict[str, Any]:
+    return _send_request(
+        {
+            "action": "send",
+            "session_token": session_token,
+            "from_id": from_id,
+            "to_id": to_id,
+            "message": {"content": content},
+        }
+    )
+
+
+def ping(session_token: Optional[str] = None, target: Optional[str] = None) -> Dict[str, Any]:
+    # No explicit ping action: synthesize via small request and measure RTT
+    start = time.perf_counter()
+    r = (
+        status()
+        if not session_token
+        else _send_request({"action": "list", "session_token": session_token})
+    )
+    rtt = int((time.perf_counter() - start) * 1000)
+    ok = r.get("status") in ("ok", "error")  # broker reachable gives a response shape
+    return {"ok": ok, "rtt_ms": rtt, "target": target or "local"}
+
+
+# --- T029: Broker detection and auto-start helpers ---
+
+
+def is_broker_available(timeout_s: float = 0.5) -> bool:
+    """Return True if broker responds to a status request within timeout.
+
+    Non-throwing, conservative check: only returns True when we get a valid-shaped
+    response with status in ("ok", "error").
+    """
+    try:
+        # quick socket-level probe to avoid long hangs
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(timeout_s)
+        s.connect((IPC_HOST, IPC_PORT))
+        s.close()
+    except Exception:
+        return False
+    try:
+        r = status()
+        return r.get("status") in ("ok", "error")
+    except Exception:
+        return False
+
+
+def ensure_broker_running(max_wait_s: float = 1.0) -> bool:
+    """Ensure a broker is running locally.
+
+    Best-effort: tries import-based in-process start (claude_ipc_server) and then polls
+    status up to max_wait_s. Returns True if reachable, else False.
+    """
+    if is_broker_available(0.2):
+        return True
+    # Try to start embedded broker
+    try:
+        import importlib
+
+        importlib.import_module("claude_ipc_server")
+    except Exception:
+        # Ignore; we'll just fall back to polling
+        pass
+    # Poll for readiness
+    deadline = time.perf_counter() + max_wait_s
+    while time.perf_counter() < deadline:
+        if is_broker_available(0.2):
+            return True
+        time.sleep(0.05)
+    return is_broker_available(0.2)
+
+
+def ensure_project_broker(max_wait_s: float = 5.0) -> tuple[bool, str]:
+    """
+    Ensure project-specific broker is running.
+
+    Auto-starts broker if not running on project-specific port.
+
+    Args:
+        max_wait_s: Maximum time to wait for broker startup
+
+    Returns:
+        Tuple of (success: bool, message: str)
+    """
+    try:
+        from core.project_local import detect_project_root
+        from core.project_port import get_project_port_auto, is_broker_running
+
+        project_root = detect_project_root()
+        port = get_project_port_auto(project_root)
+        host = os.getenv("IPC_HOST", "127.0.0.1")
+
+        # Check if broker is already running on project port
+        if is_broker_running(port, host, timeout=0.5):
+            return True, f"Broker running on {host}:{port}"
+
+        # Try to start broker for this project
+        import subprocess
+        import sys
+
+        # Start broker as subprocess from project directory
+        broker_script = Path(__file__).parent.parent / "claude_ipc_server.py"
+
+        if not broker_script.exists():
+            return False, f"Broker script not found: {broker_script}"
+
+        # Start broker with project-specific port
+        env = os.environ.copy()
+        env["IPC_GLOBAL_PORT"] = str(port)
+        env["IPC_HOST"] = host
+
+        # Use CREATE_NO_WINDOW on Windows to suppress console
+        creationflags = 0x08000000 if sys.platform == "win32" else 0
+
+        subprocess.Popen(
+            [sys.executable, str(broker_script)],
+            cwd=str(project_root),
+            env=env,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            creationflags=creationflags
+        )
+
+        # Wait for broker to be ready
+        deadline = time.perf_counter() + max_wait_s
+        while time.perf_counter() < deadline:
+            if is_broker_running(port, host, timeout=0.2):
+                # Save port to project.json
+                _save_project_config(project_root, host, port)
+                return True, f"Broker started on {host}:{port}"
+            time.sleep(0.1)
+
+        return False, f"Broker failed to start on {host}:{port}"
+
+    except Exception as e:
+        return False, f"Error starting project broker: {e}"
+
+
+def _save_project_config(project_root: Path, host: str, port: int) -> None:
+    """Save broker configuration to project.json."""
+    try:
+        project_json = project_root / ".ipc" / "state" / "project.json"
+        project_json.parent.mkdir(parents=True, exist_ok=True)
+
+        config = {
+            "broker_host": host,
+            "broker_port": port,
+            "project_path": str(project_root),
+            "project_id": str(project_root.resolve()).lower().replace('\\', '/')
+        }
+
+        project_json.write_text(json.dumps(config, indent=2), encoding="utf-8")
+    except Exception:
+        pass  # Non-critical, config will be regenerated on next run

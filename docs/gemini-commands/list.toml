@@ -1,0 +1,14 @@
+# IPC Command for Gemini CLI
+
+description = "📋 List all registered instances"
+prompt = """
+List all registered instances:
+
+!{uv run python D:/claude-ipc-mcp/tools/ipc_global_command.py instances list --full}
+
+Shows all instances with:
+- Instance ID
+- Last seen time
+- Auto-responder status
+- Session status
+"""

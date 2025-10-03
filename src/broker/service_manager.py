@@ -33,10 +33,11 @@ class ServiceManager:
         self.port = port or int(os.getenv("IPC_GLOBAL_PORT",
                                 os.getenv("IPC_PORT", "9876")))
 
-        # Paths
-        self.data_dir = Path.home() / ".claude-ipc-data"
+        # Paths - Use project-local .ipc directory
+        from core.project_local import get_project_ipc_dir
+        self.data_dir = get_project_ipc_dir() / "state"
         self.pid_file = self.data_dir / "broker.pid"
-        self.log_file = self.data_dir / "broker.log"
+        self.log_file = get_project_ipc_dir() / "logs" / "broker.log"
 
         # Ensure data directory exists
         self.data_dir.mkdir(parents=True, exist_ok=True)

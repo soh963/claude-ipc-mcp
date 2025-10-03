@@ -5,7 +5,8 @@ import sys
 from pathlib import Path
 from typing import Optional, Tuple
 
-from core.ipc_fs import ensure_ipc_layout, project_ipc_root
+# MIGRATION: Use local_broker_client for .ipc structure (absolute rules)
+import local_broker_client
 from core.compat import check_compat
 from core.router import ProjectIdentifier
 from core.logging_utils import with_logging, setup_project_logging
@@ -53,20 +54,17 @@ def create_settings_file(config_dir: Path) -> Path:
 
 
 def create_project_file(state_dir: Path, project_root: Path) -> Path:
-    """Create project.json with project_id and broker_port; preserve existing ID if present."""
+    """Create project.json with project_id (local broker mode - no TCP port)."""
     project_file = state_dir / "project.json"
 
     project_id: Optional[str] = None
-    broker_port: Optional[int] = None
 
     if project_file.exists():
         try:
             existing = json.loads(project_file.read_text(encoding="utf-8"))
             project_id = existing.get("project_id")
-            broker_port = existing.get("broker_port")
         except Exception:
             project_id = None
-            broker_port = None
 
     if not project_id:
         # Generate deterministic ID based on project path
@@ -75,28 +73,11 @@ def create_project_file(state_dir: Path, project_root: Path) -> Path:
         if not str(project_id).startswith("proj_"):
             project_id = f"proj_{project_id}"
 
-    # Get broker port with global broker detection (always detect running broker first)
-    if not broker_port:
-        try:
-            from core.project_port import get_or_create_project_port
-            broker_port, mode = get_or_create_project_port(project_root, force_global=True)
-
-            # Log detection result
-            if mode == "global":
-                print(f"✅ Detected global broker on port {broker_port}")
-            else:
-                print(f"⚠️ Using project-specific broker on port {broker_port}")
-        except Exception as e:
-            # Fallback to default port if detection fails
-            import os
-            broker_port = int(os.getenv("IPC_PORT", os.getenv("IPC_GLOBAL_PORT", "9876")))
-            print(f"⚠️ Broker detection failed, using default port {broker_port}: {e}")
-
+    # Local broker mode (absolute rules): No TCP port, uses Unix socket/Named Pipe
     project_data = {
         "project_id": project_id,
         "root_path": str(project_root),
-        "broker_host": "127.0.0.1",
-        "broker_port": broker_port,
+        "broker_mode": "local",  # Unix socket or Named Pipe
         "initialized_by": "ipc init",
     }
 
@@ -159,16 +140,17 @@ def check_version_compatibility(config_dir: Path) -> Tuple[bool, Optional[str]]:
 
 @with_logging("init")
 def run_init(project_root: Optional[Path] = None) -> int:
-    """Run the init command.
+    """Run the init command (local broker mode - absolute rules).
 
     Args:
-        project_root: Project root directory (defaults to current working directory)
+        project_root: Project root directory (defaults to auto-detected)
 
     Returns:
         Exit code (0 = success, non-zero = error)
     """
+    # Auto-detect project root using absolute rules priority (.ipc first)
     if project_root is None:
-        project_root = Path.cwd()
+        project_root = local_broker_client.detect_project_root()
 
     project_root = project_root.resolve()
 
@@ -176,11 +158,14 @@ def run_init(project_root: Optional[Path] = None) -> int:
         # Setup logging first (creates logs dir if needed)
         setup_project_logging(project_root)
 
-        # Get directory paths
-        ipc_root = project_ipc_root(project_root)
+        # Create .ipc structure following absolute rules (includes broker/ dir)
+        local_broker_client.ensure_ipc_structure(project_root)
+
+        ipc_root = project_root / ".ipc"
+        config_dir = ipc_root / "config"
+        state_dir = ipc_root / "state"
 
         # Check version compatibility before making changes
-        config_dir = ipc_root / "config"
         if config_dir.exists():
             compatible, message = check_version_compatibility(config_dir)
             if not compatible:
@@ -190,19 +175,19 @@ def run_init(project_root: Optional[Path] = None) -> int:
                 # Emit a non-fatal warning when running in restricted compatibility
                 print(f"warning: {message}", file=sys.stderr)
 
-        # Create basic .ipc structure using existing utility (dirs and default files)
-        layout = ensure_ipc_layout(project_root)
-
         # Create settings.json with version info (idempotent)
-        create_settings_file(layout["config"])
+        create_settings_file(config_dir)
 
-        # Create project.json with project_id (stable across runs)
-        create_project_file(layout["state"], project_root)
+        # Create project.json with project_id (local broker mode)
+        create_project_file(state_dir, project_root)
 
         # Create .gitignore for .ipc directory
-        create_gitignore_file(layout["root"])
+        create_gitignore_file(ipc_root)
 
-        # No need to print anything specific for tests; keep output minimal
+        print(f"✅ Initialized IPC in {project_root}")
+        print(f"   Mode: Local broker (Unix socket/Named Pipe)")
+        print(f"   .ipc structure created with broker/ directory")
+
         return 0
 
     except Exception as e:
